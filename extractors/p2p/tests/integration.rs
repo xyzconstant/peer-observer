@@ -153,18 +153,17 @@ async fn check(
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
 
-    // initiate a v1 connection to the p2p-extractor
-    node.client
-        .add_connection(
-            &format!("127.0.0.1:{}", p2p_extractor_port),
-            "outbound-full-relay",
-            true,
-        )
-        .unwrap();
-
     // Make sure the p2p-extractor and node are connected
     let mut connected = false;
     for i in 0..100 {
+        node.client
+            .add_connection(
+                &format!("127.0.0.1:{}", p2p_extractor_port),
+                "outbound-full-relay",
+                true,
+            )
+            .unwrap();
+        sleep(Duration::from_secs(1)).await;
         let peers = node.client.get_peer_info().unwrap().0;
         if peers.len() == 1 && peers[0].transport_protocol_type == "v1" {
             log::info!("p2p-extractor and node are connected: {:?}", peers[0]);
@@ -175,7 +174,6 @@ async fn check(
             "p2p-extractor and node are not yet connected: attempt {}",
             i
         );
-        sleep(Duration::from_secs(1)).await;
     }
     assert!(connected, "The node and p2p-extractor aren't conencted.");
 
