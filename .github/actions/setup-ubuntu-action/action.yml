@@ -1,0 +1,20 @@
+name: Common setup for peer-observer ubuntu-based workflows
+description: Checkout repo, install dependencies,
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v6
+    - name: Install build dependecies
+      run: |
+        sudo apt update -y
+        sudo apt-get install -y \
+          protobuf-compiler \
+          libelf-dev \
+          clang \
+          llvm \
+          llvm-14 \
+          zstd \
+          binutils-dev \
+          elfutils \
+          gcc-multilib
