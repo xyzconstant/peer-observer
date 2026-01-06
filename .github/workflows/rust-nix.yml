@@ -15,6 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v6
     - uses: ./.github/actions/setup-nix-action
     - name: Build
       run: nix-shell --pure --command "cargo build --all-features"
@@ -22,6 +23,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v6
     - uses: ./.github/actions/setup-nix-action
     - name: Run tests
       run: nix-shell --pure --command "cargo test --all-features"
@@ -29,6 +31,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v6
     - uses: ./.github/actions/setup-nix-action
     # needed to have all packages code-generated for fmt
     - name: Run cargo check
@@ -39,6 +42,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v6
     - uses: ./.github/actions/setup-nix-action
     - name: Run coverage
       run: nix-shell --pure --command "cargo tarpaulin --out Lcov --out Html --workspace --all-features"

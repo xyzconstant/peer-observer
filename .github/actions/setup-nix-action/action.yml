@@ -1,10 +1,9 @@
 name: Common setup for peer-observer nix-based workflows
-description: Checkout repo and install nix
+description: Install nix
 
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v6
     - name: Install Nix
       uses: cachix/install-nix-action@v31
       with:
