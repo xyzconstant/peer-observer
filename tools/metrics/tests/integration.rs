@@ -290,7 +290,7 @@ async fn test_integration_metrics_p2p_traffic_linkinglion() {
                 ebpf_event: Some(ebpf::EbpfEvent::Message(message::MessageEvent {
                     meta: Metadata {
                         peer_id: 0,
-                        addr: "162.218.65.123".to_string(), // an IP belonging to LinkingLion
+                        addr: "31.58.215.2".to_string(), // an IP belonging to LinkingLion
                         conn_type: 1,
                         command: "ping".to_string(),
                         inbound: true,
@@ -304,7 +304,7 @@ async fn test_integration_metrics_p2p_traffic_linkinglion() {
                 ebpf_event: Some(ebpf::EbpfEvent::Message(message::MessageEvent {
                     meta: Metadata {
                         peer_id: 0,
-                        addr: "91.198.115.23:8333".to_string(), // another IP belonging to LinkingLion
+                        addr: "31.58.215.1:8333".to_string(), // another IP belonging to LinkingLion
                         conn_type: 1,
                         command: "pong".to_string(),
                         inbound: true,
@@ -972,7 +972,7 @@ async fn test_integration_metrics_p2p_version() {
                 ebpf_event: Some(ebpf::EbpfEvent::Message(message::MessageEvent {
                     meta: Metadata {
                         peer_id: 2,
-                        addr: "162.218.65.123:1234".to_string(),
+                        addr: "31.58.215.0:1234".to_string(), // LinkingLion
                         conn_type: 1,
                         command: "version".to_string(),
                         inbound: true,
@@ -1584,7 +1584,23 @@ async fn test_integration_metrics_conn_special_ip() {
                     event: Some(connection::connection_event::Event::Inbound(
                         InboundConnection {
                             conn: Connection {
-                                addr: "162.218.65.123".to_string(), // an IP belonging to LinkingLion & banned on Gmax banlist
+                                addr: "162.218.65.123:1234".to_string(), // an IP belonging to pre-2026 LinkingLion & banned on Gmax banlist
+                                conn_type: 1,
+                                network: 2,
+                                peer_id: 7,
+                            },
+                            existing_connections: 1,
+                        },
+                    )),
+                })),
+            }))
+            .unwrap(),
+            Event::new(PeerObserverEvent::EbpfExtractor(Ebpf {
+                ebpf_event: Some(ebpf::EbpfEvent::Connection(connection::ConnectionEvent {
+                    event: Some(connection::connection_event::Event::Inbound(
+                        InboundConnection {
+                            conn: Connection {
+                                addr: "31.58.215.12:2345".to_string(), // an IP belonging to LinkingLion
                                 conn_type: 1,
                                 network: 2,
                                 peer_id: 7,
@@ -1616,12 +1632,12 @@ async fn test_integration_metrics_conn_special_ip() {
         ],
         Subject::NetConn,
         r#"
-        peerobserver_conn_inbound 2
+        peerobserver_conn_inbound 3
         peerobserver_conn_inbound_banlist_gmax 1
         peerobserver_conn_inbound_banlist_monero 1
         peerobserver_conn_inbound_list_linkinglion 1
         peerobserver_conn_inbound_current 2
-        peerobserver_conn_inbound_network{network="2"} 2
+        peerobserver_conn_inbound_network{network="2"} 3
         peerobserver_conn_inbound_tor_exit 1
         "#,
     )
@@ -1873,7 +1889,7 @@ async fn test_integration_metrics_rpc_peerinfo() {
                             addr_processed: 342,
                             addr_rate_limited: 0,
                             addr_relay_enabled: true,
-                            address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                            address: "31.58.215.2:8332".to_string(), // LinkingLion IP
                             address_bind: "1.2.3.4:8332".to_string(),
                             address_local: "1.2.3.4:8332".to_string(),
                             bip152_hb_from: false,
@@ -1914,7 +1930,7 @@ async fn test_integration_metrics_rpc_peerinfo() {
                             addr_processed: 342,
                             addr_rate_limited: 434,
                             addr_relay_enabled: true,
-                            address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                            address: "162.218.65.123:8332".to_string(), // pre-2026 LinkingLion IP
                             address_bind: "1.2.3.4:8332".to_string(),
                             address_local: "1.2.3.4:8332".to_string(),
                             bip152_hb_from: false,
@@ -1969,9 +1985,9 @@ async fn test_integration_metrics_rpc_peerinfo() {
         peerobserver_rpc_peer_info_connection_type_peers{connection_type="type1"} 2
         peerobserver_rpc_peer_info_inflight_block_peers 1
         peerobserver_rpc_peer_info_inflight_distinct_blocks_heights 2
-        peerobserver_rpc_peer_info_list_peers_gmax_ban 2
-        peerobserver_rpc_peer_info_list_peers_linkinglion 2
-        peerobserver_rpc_peer_info_list_peers_monero_ban 2
+        peerobserver_rpc_peer_info_list_peers_gmax_ban 1
+        peerobserver_rpc_peer_info_list_peers_linkinglion 1
+        peerobserver_rpc_peer_info_list_peers_monero_ban 1
         peerobserver_rpc_peer_info_list_peers_tor_exit 1
         peerobserver_rpc_peer_info_minping_mean 420000
         peerobserver_rpc_peer_info_minping_median 13000

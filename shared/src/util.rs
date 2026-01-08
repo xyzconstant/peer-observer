@@ -52,8 +52,9 @@ pub fn current_timestamp() -> u64 {
         .as_secs()
 }
 
-/// Checks if the IP belongs to the LinkingLion entity.
-pub fn is_on_linkinglion_banlist(ip: &str) -> bool {
+/// Checks if the IP belongs to the old LinkingLion entity.
+/// These were used till end of 2025.
+pub fn is_on_pre2026_linkinglion_banlist(ip: &str) -> bool {
     // Since this list is rather small and doesn't update frequently,
     // but includes a /64 IPv6 address, we don't keep a separate list file for it. The matching is implemented with
     // a `ip.starts_with()`, to avoid having to check all possibilities of the /64.
@@ -61,6 +62,16 @@ pub fn is_on_linkinglion_banlist(ip: &str) -> bool {
         || ip.starts_with("209.222.252")
         || ip.starts_with("91.198.115")
         || ip.starts_with("2604:d500:4:")
+}
+
+/// Checks if the IP belongs to the LinkingLion entity.
+/// These IPs were first used end of 2025.
+/// https://bnoc.xyz/t/linkinglion-an-entity-linking-bitcoin-transactions-to-ips/12/10
+pub fn is_on_linkinglion_banlist(ip: &str) -> bool {
+    ip.starts_with("143.20.137.")
+        || ip.starts_with("31.58.215.")
+        || ip.starts_with("87.229.79.")
+        || ip.starts_with("2602:f5c0:")
 }
 
 #[cfg(test)]
@@ -157,6 +168,26 @@ mod tests {
     }
 
     #[test]
+    fn test_old_linkinglion() {
+        assert!(!is_on_pre2026_linkinglion_banlist(
+            "this is probably not an ip of linkinglion"
+        ));
+
+        // The IP addresses defined in RFC5737 for use in documentation are not on a LinkingLion banlist.
+        //
+        // https://www.rfc-editor.org/rfc/rfc5737
+        assert!(!is_on_pre2026_linkinglion_banlist("192.0.2.222")); // TEST-NET-1
+        assert!(!is_on_pre2026_linkinglion_banlist("198.51.100.111")); // TEST-NET-2
+        assert!(!is_on_pre2026_linkinglion_banlist("203.0.113.123")); // TEST-NET-3
+
+        // These are actual IP addresses LinkingLion uses.
+        assert!(is_on_pre2026_linkinglion_banlist("162.218.65.254"));
+        assert!(is_on_pre2026_linkinglion_banlist("209.222.252.254"));
+        assert!(is_on_pre2026_linkinglion_banlist("91.198.115.62"));
+        assert!(is_on_pre2026_linkinglion_banlist("2604:d500:4:1::3:fe"));
+    }
+
+    #[test]
     fn test_linkinglion() {
         assert!(!is_on_linkinglion_banlist(
             "this is probably not an ip of linkinglion"
@@ -170,10 +201,10 @@ mod tests {
         assert!(!is_on_linkinglion_banlist("203.0.113.123")); // TEST-NET-3
 
         // These are actual IP addresses LinkingLion uses.
-        assert!(is_on_linkinglion_banlist("162.218.65.254"));
-        assert!(is_on_linkinglion_banlist("209.222.252.254"));
-        assert!(is_on_linkinglion_banlist("91.198.115.62"));
-        assert!(is_on_linkinglion_banlist("2604:d500:4:1::3:fe"));
+        assert!(is_on_linkinglion_banlist("143.20.137.254"));
+        assert!(is_on_linkinglion_banlist("31.58.215.254"));
+        assert!(is_on_linkinglion_banlist("87.229.79.62"));
+        assert!(is_on_linkinglion_banlist("2602:f5c0:0:ace::1"));
     }
 
     #[test]

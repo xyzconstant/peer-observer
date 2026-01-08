@@ -51,10 +51,10 @@ function networkFromAddress(address) {
 
 function isLinkingLion(address) {
   return (
-    address.startsWith("162.218.65.") ||
-    address.startsWith("209.222.252.") ||
-    address.startsWith("91.198.115.") ||
-    address.startsWith("[2604:d500")
+    address.startsWith("143.20.137.") ||
+    address.startsWith("31.58.215.") ||
+    address.startsWith("87.229.79.") ||
+    address.startsWith("[2602:f5c0:")
   );
 }
 
@@ -89,12 +89,12 @@ function isLikelySpy(address) {
 
 function testIsLinkingLion() {
   const testcases = [
-    ["162.218.65.53", true],
-    ["[2604:d500:4:1::2]", true],
-    ["209.222.252.1", true],
+    ["143.20.137.53", true],
+    ["[2602:f5c0:4:1::2]", true],
+    ["31.58.215.1", true],
     ["91.198.110", false],
     ["127.0.0.1", false],
-    ["[2604:d500:4:1::4]", true],
+    ["[2602:f5c0:4:1::4]", true],
   ];
 
   for (test of testcases) {
@@ -138,9 +138,9 @@ function testNetworkFromAddress() {
 
 function testIsLikelySpy() {
   const testcases = [
-    ["162.218.65.53", true], // LinkingLion
-    ["[2604:d500:4:1::2]", true], // LinkingLion
-    ["209.222.252.1", true], // LinkingLion
+    ["143.20.137.53.53", true], // LinkingLion
+    ["[2602:f5c0:4:1::2]", true], // LinkingLion
+    ["87.229.79.1", true], // LinkingLion
     ["91.198.110", false], // not LinkingLion
     ["127.0.0.1", false],
     ["129.13.189.200", true], // KIT
@@ -227,7 +227,7 @@ function processWebsocketMessage(e) {
     } else if (p2p_event.hasOwnProperty("InventoryAnnouncement")) {
       handle_p2p_extractor_inventoryannouncement(p2p_event.InventoryAnnouncement)
     } else if (p2p_event.hasOwnProperty("AddressAnnouncement")) {
-      handle_p2p_extractor_addressannouncement(p2p_event.AddressAnnouncement)      
+      handle_p2p_extractor_addressannouncement(p2p_event.AddressAnnouncement)
     } else {
       console.warn("Unhandled P2P-extractor event", p2p_event);
     }
