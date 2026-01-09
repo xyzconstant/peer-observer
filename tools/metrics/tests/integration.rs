@@ -1987,6 +1987,7 @@ async fn test_integration_metrics_rpc_peerinfo() {
         peerobserver_rpc_peer_info_inflight_distinct_blocks_heights 2
         peerobserver_rpc_peer_info_list_peers_gmax_ban 1
         peerobserver_rpc_peer_info_list_peers_linkinglion 1
+        peerobserver_rpc_peer_info_list_peers_linkinglion_pre2026 1
         peerobserver_rpc_peer_info_list_peers_monero_ban 1
         peerobserver_rpc_peer_info_list_peers_tor_exit 1
         peerobserver_rpc_peer_info_minping_mean 420000

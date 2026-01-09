@@ -221,6 +221,7 @@ fn handle_rpc_event(e: &rpc::RpcEvent, metrics: metrics::Metrics) {
             let mut on_monero_banlist = 0;
             let mut on_tor_exit_list = 0;
             let mut on_linkinglion_list = 0;
+            let mut on_pre2026_linkinglion_list = 0;
             let mut on_bitprojects_list_inbound = 0;
             let mut on_bitprojects_list_outbound = 0;
 
@@ -280,6 +281,9 @@ fn handle_rpc_event(e: &rpc::RpcEvent, metrics: metrics::Metrics) {
                 }
                 if util::is_on_linkinglion_banlist(&ip) {
                     on_linkinglion_list += 1;
+                }
+                if util::is_on_pre2026_linkinglion_banlist(&ip) {
+                    on_pre2026_linkinglion_list += 1;
                 }
                 if util::belongs_to_bitprojects(&ip) {
                     if peer.inbound {
@@ -409,6 +413,9 @@ fn handle_rpc_event(e: &rpc::RpcEvent, metrics: metrics::Metrics) {
             metrics
                 .rpc_peer_info_list_peers_linkinglion
                 .set(on_linkinglion_list);
+            metrics
+                .rpc_peer_info_list_peers_linkinglion_pre2026
+                .set(on_pre2026_linkinglion_list);
             metrics
                 .rpc_peer_info_list_peers_bitprojects
                 .with_label_values(&[&"inbound"])
