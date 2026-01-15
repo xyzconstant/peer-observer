@@ -18,7 +18,7 @@ use shared::protobuf::ebpf_extractor::{
 use shared::protobuf::event::event::PeerObserverEvent;
 use shared::protobuf::event::Event;
 use shared::simple_logger;
-use shared::{async_nats, clap, tokio};
+use shared::{async_nats, clap, nats_util, tokio};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::mem::MaybeUninit;
@@ -141,9 +141,9 @@ const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
 ))]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Address of the NATS server where the extractor will publish messages to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
 
     /// Path to the Bitcoin Core (bitcoind) binary that should be hooked into.
     #[arg(short, long)]
@@ -270,9 +270,10 @@ async fn run() -> Result<(), RuntimeError> {
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    let nc = async_nats::connect(&args.nats_address).await?;
-    log::info!("Connected to NATS server at {}", &args.nats_address);
+    let nc = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    log::info!("Connected to NATS server at {}", &args.nats.address);
 
     // Update the ebpf-extractor docs in the README.md when editing the active_tracepoints.
     let mut active_tracepoints = vec![];

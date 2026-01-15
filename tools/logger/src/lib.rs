@@ -1,15 +1,17 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use shared::clap;
 use shared::clap::Parser;
 use shared::futures::stream::StreamExt;
 use shared::log;
+use shared::nats_util;
+use shared::nats_util::NatsArgs;
 use shared::prost::Message;
 use shared::protobuf::ebpf_extractor::ebpf;
 use shared::protobuf::event::event::PeerObserverEvent;
 use shared::protobuf::event::{self, Event};
 use shared::protobuf::log_extractor::LogDebugCategory;
 use shared::tokio::sync::watch;
-use shared::{async_nats, clap};
 
 use crate::error::RuntimeError;
 
@@ -24,9 +26,10 @@ pub mod error;
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// The NATS server address the tool should connect and subscribe to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    pub nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
+
     /// The log level the tool should run on. Events are logged with
     /// the INFO log level. Valid log levels are "trace", "debug",
     /// "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
@@ -80,7 +83,7 @@ impl Args {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        nats_address: String,
+        nats_args: NatsArgs,
         log_level: log::Level,
         messages: bool,
         connections: bool,
@@ -92,7 +95,7 @@ impl Args {
         log_extractor: bool,
     ) -> Self {
         Self {
-            nats_address,
+            nats: nats_args,
             log_level,
             messages,
             connections,
@@ -121,10 +124,12 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         log::info!("logging log_extractor events: {}", args.log_extractor);
     }
 
-    log::debug!("Connecting to NATS-server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address.clone()).await?;
+    let nc = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+
     let mut sub = nc.subscribe("*").await?;
-    log::info!("Connected to NATS-server at {}", args.nats_address);
+    log::info!("Connected to NATS-server at {}", args.nats.address);
 
     loop {
         shared::tokio::select! {

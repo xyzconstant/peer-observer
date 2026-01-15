@@ -8,6 +8,7 @@ use shared::{
     corepc_node,
     futures::StreamExt,
     log::{Level, LevelFilter, info},
+    nats_util::NatsArgs,
     prost::Message,
     protobuf::{
         event::{Event, event::PeerObserverEvent},
@@ -54,7 +55,12 @@ fn spawn_pipe(log_path: String, pipe_path: String) {
 
 fn make_test_args(nats_port: u16, bitcoind_pipe: String) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         bitcoind_pipe,
         Level::Trace,
     )

@@ -38,9 +38,20 @@ The peer-observer log-extractor reads lines from a pipe to a Bitcoin node debug.
 Usage: log-extractor [OPTIONS] <--bitcoind-pipe <BITCOIND_PIPE>>
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>    Address of the NATS server where the extractor will publish messages to [default: 127.0.0.1:4222]
-  -b, --bitcoind-pipe <BITCOIND_PIPE>  Path to the bitcoind log pipe (named pipe / FIFO)
-  -l, --log-level <LOG_LEVEL>          The log level the extractor should run with. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
-  -h, --help                           Print help
-  -V, --version                        Print version
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
+  -b, --bitcoind-pipe <BITCOIND_PIPE>
+          Path to the bitcoind log pipe (named pipe / FIFO)
+  -l, --log-level <LOG_LEVEL>
+          The log level the extractor should run with. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```

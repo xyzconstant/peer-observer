@@ -5,6 +5,7 @@ use logger::{error::RuntimeError, Args};
 use shared::{
     log::{self, Level, Record, SetLoggerError},
     nats_subjects::Subject,
+    nats_util,
     prost::Message,
     protobuf::{
         ebpf_extractor::{
@@ -78,7 +79,12 @@ fn make_test_args(
     log_extractor: bool,
 ) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        nats_util::NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         log::Level::Trace,
         messages,
         connections,

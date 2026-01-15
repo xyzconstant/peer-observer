@@ -5,11 +5,14 @@ use shared::{
     async_nats, corepc_node,
     futures::StreamExt,
     log::{self, info},
+    nats_util::NatsArgs,
     prost::Message,
-    protobuf::event::{Event, event::PeerObserverEvent},
-    protobuf::rpc_extractor::rpc::RpcEvent::{
-        AddrmanInfo, BlockchainInfo, ChainTxStats, MemoryInfo, MempoolInfo, NetTotals, NetworkInfo,
-        PeerInfos, Uptime,
+    protobuf::{
+        event::{Event, event::PeerObserverEvent},
+        rpc_extractor::rpc::RpcEvent::{
+            AddrmanInfo, BlockchainInfo, ChainTxStats, MemoryInfo, MempoolInfo, NetTotals,
+            NetworkInfo, PeerInfos, Uptime,
+        },
     },
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
@@ -50,7 +53,12 @@ fn make_test_args(
     disable_getblockchaininfo: bool,
 ) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         log::Level::Trace,
         rpc_url,
         cookie_file,

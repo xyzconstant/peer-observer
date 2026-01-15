@@ -13,6 +13,8 @@ use shared::{
     clap::{self, Parser, ValueEnum},
     log,
     nats_subjects::Subject,
+    nats_util,
+    nats_util::NatsArgs,
     prost::Message,
     protobuf::{
         bitcoin_primitives,
@@ -81,9 +83,9 @@ impl From<Network> for BitcoinNetwork {
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Address of the NATS server where the extractor will publish messages to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    pub nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
 
     /// The log level the extractor should run with. Valid log levels are "trace",
     /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html.
@@ -130,7 +132,7 @@ pub struct Args {
 impl Args {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        nats_address: String,
+        nats: NatsArgs,
         log_level: log::Level,
         p2p_address: String,
         p2p_network: Network,
@@ -141,7 +143,7 @@ impl Args {
         disable_feefilter: bool,
     ) -> Args {
         Self {
-            nats_address,
+            nats,
             log_level,
             p2p_address,
             p2p_network,
@@ -170,9 +172,10 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         log::warn!("No P2P measurement enabled!");
     }
 
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    let nats_client = async_nats::connect(&args.nats_address).await?;
-    log::info!("Connected to NATS server at {}", &args.nats_address);
+    let nats_client = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    log::info!("Connected to NATS server at {}", &args.nats.address);
 
     log::debug!("Starting TCP listener on {}..", args.p2p_address);
     let listener = TcpListener::bind(args.p2p_address.clone()).await?;

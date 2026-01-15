@@ -3,10 +3,11 @@
 use shared::clap::Parser;
 use shared::futures::{stream::SplitSink, SinkExt, StreamExt};
 use shared::log;
+use shared::nats_util::NatsArgs;
 use shared::prost::Message;
 use shared::protobuf::event::{self, event::PeerObserverEvent};
 use shared::{
-    async_nats, clap,
+    clap, nats_util,
     tokio::{
         self,
         net::{TcpListener, TcpStream},
@@ -26,9 +27,9 @@ pub mod error;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// The NATS server address the tool should connect and subscribe to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    pub nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
 
     /// The websocket address the tool listens on.
     #[arg(short, long, default_value = "127.0.0.1:47482")]
@@ -41,9 +42,9 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(nats_address: String, websocket_address: String, log_level: log::Level) -> Self {
+    pub fn new(nats: NatsArgs, websocket_address: String, log_level: log::Level) -> Self {
         Self {
-            nats_address,
+            nats,
             websocket_address,
             log_level,
         }
@@ -57,9 +58,10 @@ pub async fn run(
     args: Args,
     mut shutdown_rx: watch::Receiver<bool>,
 ) -> Result<(), error::RuntimeError> {
-    log::debug!("Connecting to NATS-server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address.clone()).await?;
-    log::info!("Connected to NATS-server at {}", args.nats_address);
+    let nc = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    log::info!("Connected to NATS-server at {}", args.nats.address);
     let mut sub = nc.subscribe("*").await?;
 
     let clients = Arc::new(Mutex::new(HashMap::new()));

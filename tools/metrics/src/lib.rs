@@ -4,8 +4,9 @@
 
 use shared::clap::Parser;
 use shared::futures::StreamExt;
-use shared::log::{debug, info, warn, Level};
+use shared::log::{info, warn, Level};
 use shared::metricserver;
+use shared::nats_util::{self, NatsArgs};
 use shared::prost::Message;
 use shared::protobuf::bitcoin_primitives;
 use shared::protobuf::{
@@ -40,9 +41,10 @@ const LOG_TARGET: &str = "main";
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// The NATS server address the tool should connect and subscribe to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
+
     /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:8282")]
     metrics_address: String,
@@ -53,9 +55,9 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(nats_address: String, metrics_address: String, log_level: Level) -> Self {
+    pub fn new(nats: NatsArgs, metrics_address: String, log_level: Level) -> Self {
         Self {
-            nats_address,
+            nats,
             metrics_address,
             log_level,
         }
@@ -74,9 +76,10 @@ pub async fn run(
 
     metricserver::start(&args.metrics_address, Some(metrics.registry.clone()))?;
 
-    debug!("Connecting to NATS-server at {}", args.nats_address.clone());
-    let nc = async_nats::connect(args.nats_address.clone()).await?;
-    info!("Connected to NATS-server at {}", args.nats_address);
+    let nc = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    info!("Connected to NATS-server at {}", args.nats.address);
     let mut sub = nc.subscribe("*").await?;
 
     metrics

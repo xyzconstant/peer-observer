@@ -27,8 +27,14 @@ A peer-observer tool that sends out all events on a websocket
 Usage: websocket [OPTIONS]
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>
-          The NATS server address the tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
   -w, --websocket-address <WEBSOCKET_ADDRESS>
           The websocket address the tool listens on [default: 127.0.0.1:47482]
   -l, --log-level <LOG_LEVEL>

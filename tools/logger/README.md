@@ -54,22 +54,39 @@ The logger output looks similar to the following:
 ## Usage
 
 ```
-$ cargo run --bin logger -- --help
 A peer-observer tool that logs all received event messages. By default, all events are shown. This can be a lot. Events can be filtered by type. For example, `--messages` only shows P2P messages. Using `--messages --connections` together shows P2P messages and connections
 
 Usage: logger [OPTIONS]
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>  The NATS server address the tool should connect and subscribe to [default: 127.0.0.1:4222]
-  -l, --log-level <LOG_LEVEL>        The log level the tool should run on. Events are logged with the INFO log level. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
-      --messages                     If passed, show P2P message events
-      --connections                  If passed, show P2P connection events
-      --addrman                      If passed, show addrman events
-      --mempool                      If passed, show mempool events
-      --validation                   If passed, show validation events
-      --rpc                          If passed, show RPC events
-      --p2p-extractor                If passed, show p2p-extractor events
-      --log-extractor                If passed, show log-extractor events
-  -h, --help                         Print help
-  -V, --version                      Print version
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
+  -l, --log-level <LOG_LEVEL>
+          The log level the tool should run on. Events are logged with the INFO log level. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
+      --messages
+          If passed, show P2P message events
+      --connections
+          If passed, show P2P connection events
+      --addrman
+          If passed, show addrman events
+      --mempool
+          If passed, show mempool events
+      --validation
+          If passed, show validation events
+      --rpc
+          If passed, show RPC events
+      --p2p-extractor
+          If passed, show p2p-extractor events
+      --log-extractor
+          If passed, show log-extractor events
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```

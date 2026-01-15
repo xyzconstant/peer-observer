@@ -6,6 +6,7 @@ use metrics::Args;
 use shared::{
     log::{debug, warn, Level, LevelFilter},
     nats_subjects::Subject,
+    nats_util::NatsArgs,
     prost::Message,
     protobuf::{
         bitcoin_primitives::{self, inventory_item::Item, Address, InventoryItem},
@@ -85,7 +86,12 @@ fn setup() -> u16 {
 
 fn make_test_args(nats_port: u16, metrics_port: u16) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         format!("127.0.0.1:{}", metrics_port),
         Level::Trace,
     )

@@ -28,15 +28,32 @@ The peer-observer p2p-extractor listens for a connection from a Bitcoin node and
 Usage: p2p-extractor [OPTIONS]
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>    Address of the NATS server where the extractor will publish messages to [default: 127.0.0.1:4222]
-  -l, --log-level <LOG_LEVEL>          The log level the extractor should run with. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
-      --p2p-address <P2P_ADDRESS>      Address of the P2P interface the P2P extractor will listen on. On the Bitcoin node side, the connection needs to be established with -addnode=<p2p_address> [default: 127.0.0.1:9333]
-      --p2p-network <P2P_NETWORK>      Network (P2P) the Bitcoin node is on. This determines the network magic. The network magic of the p2p-extractor and the Bitcoin node must match [default: mainnet] [possible values: mainnet, testnet3, testnet4, signet, regtest]
-      --ping-interval <PING_INTERVAL>  The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows to configure the ping interval (in seconds) [default: 10]
-      --disable-ping                   The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows disabling the ping measurements
-      --disable-addrv2                 The p2p_extractor publishes events for addresses the node annouces to us. This allows disabling the address annoucement events
-      --disable-invs                   The p2p_extractor publishes events for invs the node annouces to us. This allows disabling the inv annoucement events
-      --disable-feefilter              The p2p_extractor publishes events for feefilters the node annouces to us. This allows disabling the feefilter annoucement events
-  -h, --help                           Print help
-  -V, --version                        Print version
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
+  -l, --log-level <LOG_LEVEL>
+          The log level the extractor should run with. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
+      --p2p-address <P2P_ADDRESS>
+          Address of the P2P interface the P2P extractor will listen on. On the Bitcoin node side, the connection needs to be established with -addnode=<p2p_address> [default: 127.0.0.1:9333]
+      --p2p-network <P2P_NETWORK>
+          Network (P2P) the Bitcoin node is on. This determines the network magic. The network magic of the p2p-extractor and the Bitcoin node must match [default: mainnet] [possible values: mainnet, testnet3, testnet4, signet, regtest]
+      --ping-interval <PING_INTERVAL>
+          The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows to configure the ping interval (in seconds) [default: 10]
+      --disable-ping
+          The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows disabling the ping measurements
+      --disable-addrv2
+          The p2p_extractor publishes events for addresses the node annouces to us. This allows disabling the address annoucement events
+      --disable-invs
+          The p2p_extractor publishes events for invs the node annouces to us. This allows disabling the inv annoucement events
+      --disable-feefilter
+          The p2p_extractor publishes events for feefilters the node annouces to us. This allows disabling the feefilter annoucement events
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```

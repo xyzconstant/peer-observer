@@ -4,6 +4,7 @@ use shared::{
     futures::StreamExt,
     log::{self, warn},
     nats_subjects::Subject,
+    nats_util::NatsArgs,
     prost::Message,
     protobuf::ebpf_extractor::{
         connection::{self, Connection},
@@ -63,7 +64,12 @@ fn setup() -> u16 {
 
 fn make_test_args(nats_port: u16, websocket_port: u16) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         format!("127.0.0.1:{}", websocket_port),
         log::Level::Trace,
     )

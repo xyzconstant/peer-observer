@@ -81,8 +81,14 @@ The peer-observer extractor hooks into a Bitcoin Core binary with tracepoints an
 Usage: ebpf-extractor [OPTIONS] --bitcoind-path <BITCOIND_PATH> <--bitcoind-pid <BITCOIND_PID>|--bitcoind-pid-file <BITCOIND_PID_FILE>>
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>
-          Address of the NATS server where the extractor will publish messages to [default: 127.0.0.1:4222]
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
   -b, --bitcoind-path <BITCOIND_PATH>
           Path to the Bitcoin Core (bitcoind) binary that should be hooked into
       --bitcoind-pid <BITCOIND_PID>

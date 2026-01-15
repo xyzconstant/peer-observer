@@ -23,8 +23,14 @@ The peer-observer rpc-extractor periodically queries data from the Bitcoin Core 
 Usage: rpc-extractor [OPTIONS] <--rpc-cookie-file <RPC_COOKIE_FILE>|--rpc-user <RPC_USER>>
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>
-          Address of the NATS server where the extractor will publish messages to [default: 127.0.0.1:4222]
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
   -l, --log-level <LOG_LEVEL>
           The log level the extractor should run with. Valid log levels are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html [default: DEBUG]
       --rpc-host <RPC_HOST>

@@ -7,6 +7,7 @@ use shared::{
     corepc_node::{self},
     futures::StreamExt,
     log::{self, info},
+    nats_util::NatsArgs,
     prost::Message,
     protobuf::{
         bitcoin_primitives::inventory_item::Item,
@@ -70,7 +71,12 @@ fn make_test_args(
     disable_feefilter: bool,
 ) -> Args {
     Args::new(
-        format!("127.0.0.1:{}", nats_port),
+        NatsArgs {
+            address: format!("127.0.0.1:{}", nats_port),
+            username: None,
+            password: None,
+            password_file: None,
+        },
         log::Level::Trace,
         p2p_address,
         Network::Regtest,

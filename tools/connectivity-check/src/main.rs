@@ -21,7 +21,7 @@ use shared::protobuf::event;
 use shared::protobuf::event::event::PeerObserverEvent;
 use shared::simple_logger;
 use shared::util;
-use shared::{async_nats, clap, tokio};
+use shared::{clap, nats_util, tokio};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::OpenOptions;
@@ -46,9 +46,10 @@ const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// The NATS server address the tool should connect and subscribe to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
+
     /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:18282")]
     metrics_address: String,
@@ -327,9 +328,12 @@ async fn main() {
     metricserver::start(&args.metrics_address, None).unwrap();
     log::info!("metrics-server started on {}", &args.metrics_address);
 
-    let nc = async_nats::connect(args.nats_address)
+    let nc = nats_util::prepare_connection(&args.nats)
+        .expect("should be able to open a password file")
+        .connect(&args.nats.address)
         .await
         .expect("should be able to connect to NATS server");
+
     let mut sub = nc
         .subscribe("*")
         .await

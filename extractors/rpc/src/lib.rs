@@ -3,6 +3,7 @@ use shared::corepc_client::client_sync::Auth;
 use shared::corepc_client::client_sync::v29::Client;
 use shared::log;
 use shared::nats_subjects::Subject;
+use shared::nats_util::{self, NatsArgs};
 use shared::prost::Message;
 use shared::protobuf::event::{Event, event::PeerObserverEvent};
 use shared::protobuf::rpc_extractor;
@@ -26,9 +27,9 @@ use error::{FetchOrPublishError, RuntimeError};
 ))]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Address of the NATS server where the extractor will publish messages to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    pub nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
 
     /// The log level the extractor should run with. Valid log levels are "trace",
     /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html.
@@ -95,7 +96,7 @@ pub struct Args {
 impl Args {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        nats_address: String,
+        nats: NatsArgs,
         log_level: log::Level,
         rpc_host: String,
         rpc_cookie_file: String,
@@ -111,7 +112,7 @@ impl Args {
         disable_getblockchaininfo: bool,
     ) -> Args {
         Self {
-            nats_address,
+            nats,
             log_level,
             rpc_host,
             rpc_password: None,
@@ -142,9 +143,10 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     };
     let rpc_client = Client::new_with_auth(&format!("http://{}", args.rpc_host), auth)?;
 
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    let nats_client = async_nats::connect(&args.nats_address).await?;
-    log::info!("Connected to NATS server at {}", &args.nats_address);
+    let nats_client = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    log::info!("Connected to NATS server at {}", &args.nats.address);
 
     let duration_sec = Duration::from_secs(args.query_interval);
     let mut interval = time::interval(duration_sec);

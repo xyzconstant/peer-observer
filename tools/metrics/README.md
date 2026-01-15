@@ -88,8 +88,14 @@ A peer-observer tool that produces Prometheus metrics for received events
 Usage: metrics [OPTIONS]
 
 Options:
-  -n, --nats-address <NATS_ADDRESS>
-          The NATS server address the tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -a, --nats-address <ADDRESS>
+          The NATS server address the extractor/tool should connect and subscribe to [default: 127.0.0.1:4222]
+  -u, --nats-username <USERNAME>
+          The NATS username the extractor/tool should try to authentificate to the NATS server with
+  -p, --nats-password <PASSWORD>
+          The NATS password the extractor/tool should try to authentificate to the NATS server with
+  -f, --nats-password-file <PASSWORD_FILE>
+          A path to a file containing a password the extractor/tool should try to authentificate to the NATS server with
   -m, --metrics-address <METRICS_ADDRESS>
           The metrics server address the tool should listen on [default: 127.0.0.1:8282]
   -l, --log-level <LOG_LEVEL>

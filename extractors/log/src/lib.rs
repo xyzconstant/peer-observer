@@ -5,6 +5,7 @@ use shared::clap::Parser;
 use shared::log;
 use shared::log_matchers::parse_log_event;
 use shared::nats_subjects::Subject;
+use shared::nats_util::{self, NatsArgs};
 use shared::prost::Message;
 use shared::protobuf::event::Event;
 use shared::protobuf::event::event::PeerObserverEvent;
@@ -33,9 +34,9 @@ pub const O_NONBLOCK: i32 = 2048;
 ))]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Address of the NATS server where the extractor will publish messages to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    pub nats_address: String,
+    /// Arguments for the connection to the NATS server.
+    #[command(flatten)]
+    pub nats: nats_util::NatsArgs,
 
     /// Path to the bitcoind log pipe (named pipe / FIFO).
     #[arg(short, long)]
@@ -48,9 +49,9 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(nats_address: String, bitcoind_pipe: String, log_level: log::Level) -> Args {
+    pub fn new(nats: NatsArgs, bitcoind_pipe: String, log_level: log::Level) -> Args {
         Self {
-            nats_address,
+            nats,
             bitcoind_pipe,
             log_level,
         }
@@ -58,9 +59,10 @@ impl Args {
 }
 
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
-    log::debug!("Connecting to NATS server at {}...", &args.nats_address);
-    let nats_client = async_nats::connect(&args.nats_address).await?;
-    log::info!("Connected to NATS server at {}", &args.nats_address);
+    let nats_client = nats_util::prepare_connection(&args.nats)?
+        .connect(&args.nats.address)
+        .await?;
+    log::info!("Connected to NATS server at {}", &args.nats.address);
 
     log::info!("Opening bitcoind log pipe at {}...", &args.bitcoind_pipe);
     let file = open_pipe(&args.bitcoind_pipe, shutdown_rx.clone()).await?;
