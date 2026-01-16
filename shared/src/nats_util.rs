@@ -26,7 +26,7 @@ pub struct NatsArgs {
 }
 
 /// Populates ConnectOptions with a username and password, if the passed
-/// arguments contain one.
+/// NATS argument has one set.
 pub fn prepare_connection(args: &NatsArgs) -> Result<async_nats::ConnectOptions, io::Error> {
     match &args.username {
         Some(user) => {
@@ -71,5 +71,97 @@ pub fn prepare_connection(args: &NatsArgs) -> Result<async_nats::ConnectOptions,
             );
             Ok(async_nats::ConnectOptions::new())
         }
+    }
+}
+
+#[cfg(feature = "nats_integration_tests")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::nats_server::NatsServerForTesting;
+    use async_nats;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_integration_natsutil_user_password_incorrect() {
+        println!("test that using an incorrect password does not work");
+
+        let user = "b1tc0in";
+        let pass = "nakam0to";
+        let user_arg = format!("--user={}", user);
+        let pass_arg = format!("--pass={}", pass);
+        let extra_args: Vec<&str> = vec![&user_arg, &pass_arg];
+        let nats_server = NatsServerForTesting::new(&extra_args).await;
+        let address = format!("127.0.0.1:{}", nats_server.port);
+
+        let result = prepare_connection(&NatsArgs {
+            address: address.clone(),
+            username: Some(user.to_string()),
+            password: Some("incorrect".to_string()),
+            password_file: None,
+        })
+        .unwrap()
+        .connect(address)
+        .await;
+
+        match result {
+            Err(err) => {
+                assert!(
+                    matches!(
+                        err.kind(),
+                        async_nats::ConnectErrorKind::AuthorizationViolation
+                    ),
+                    "unexpected error kind: {err:?}"
+                );
+            }
+            Ok(_) => panic!("expected authorization error, but connection succeeded"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_integration_natsutil_user_password_correct() {
+        println!("test that using the correct user and password works");
+
+        let user = "b1tc0in";
+        let pass = "nakam0to";
+        let user_arg = format!("--user={}", user);
+        let pass_arg = format!("--pass={}", pass);
+        let extra_args: Vec<&str> = vec![&user_arg, &pass_arg];
+        let nats_server = NatsServerForTesting::new(&extra_args).await;
+        let address = format!("127.0.0.1:{}", nats_server.port);
+
+        prepare_connection(&NatsArgs {
+            address,
+            username: Some(user.to_string()),
+            password: Some(pass.to_string()),
+            password_file: None,
+        })
+        .expect("using the correct user/password should work");
+    }
+
+    #[tokio::test]
+    async fn test_integration_natsutil_user_password_correct_file() {
+        println!("test that using the correct user and a password read from a file works");
+
+        let user = "b1tc0in";
+        let pass = "password_read_from_file2";
+        let user_arg = format!("--user={}", user);
+        let pass_arg = format!("--pass={}", pass);
+        let extra_args: Vec<&str> = vec![&user_arg, &pass_arg];
+        let nats_server = NatsServerForTesting::new(&extra_args).await;
+        let address = format!("127.0.0.1:{}", nats_server.port);
+
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/fixtures/test-password-file.txt");
+
+        println!("reading password_file from: {}", path.display());
+
+        prepare_connection(&NatsArgs {
+            address,
+            username: Some(user.to_string()),
+            password: None,
+            password_file: Some(path.display().to_string()),
+        })
+        .expect("using the correct user/password should work");
     }
 }

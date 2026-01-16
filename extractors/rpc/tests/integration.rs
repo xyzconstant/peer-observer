@@ -117,7 +117,7 @@ async fn check(
 ) {
     setup();
     let (node1, _node2) = setup_two_connected_nodes();
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let rpc_extractor_handle = tokio::spawn(async move {

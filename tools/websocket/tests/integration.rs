@@ -85,7 +85,7 @@ async fn publish_and_check(
     let initial_websocket_port = setup();
     let websocket_port: Arc<Mutex<u16>> = Arc::new(Mutex::new(initial_websocket_port));
 
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_server.port).await;
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);

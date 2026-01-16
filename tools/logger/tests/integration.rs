@@ -117,7 +117,7 @@ fn check_logs(expected: &[&str]) -> Result<bool, std::io::Error> {
 async fn publish_and_check(events: &[Event], subject: Subject, expected: &str) {
     init_logger().unwrap();
 
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_server.port).await;
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);

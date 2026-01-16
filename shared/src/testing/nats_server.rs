@@ -29,7 +29,7 @@ pub struct NatsServerForTesting {
 }
 
 impl NatsServerForTesting {
-    pub async fn new() -> Self {
+    pub async fn new(extra_args: &[&str]) -> Self {
         let nats_server_binary_path: String = match env::var(ENV_NATS_SERVER_BINARY) {
             Ok(b) => b,
             Err(e) => {
@@ -49,12 +49,16 @@ impl NatsServerForTesting {
                 nats_port,
                 attempt
             );
-            let args = [&format!("--port={}", nats_port), "--addr=127.0.0.1"];
+            let port_arg = format!("--port={}", nats_port);
+            let mut args: Vec<&str> = vec![&port_arg, "--addr=127.0.0.1"];
+            args.extend(extra_args);
+
+            let args_string = args.join(" ");
 
             log::info!(
                 "Starting NATS server with: {} {}",
                 nats_server_binary_path,
-                args.join(" ")
+                args_string
             );
 
             let mut child = Command::new(nats_server_binary_path.clone())
@@ -66,8 +70,7 @@ impl NatsServerForTesting {
                 .unwrap_or_else(|_| {
                     panic!(
                         "Failed to start nats-server with binary='{}' and args='{}'",
-                        nats_server_binary_path,
-                        args.join(" ")
+                        nats_server_binary_path, args_string
                     )
                 });
 

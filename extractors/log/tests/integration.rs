@@ -104,7 +104,7 @@ async fn check(
 ) {
     setup();
     let (node1, _node2) = setup_two_connected_nodes(args);
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let node1_workdir = node1.workdir().to_str().unwrap().to_string();

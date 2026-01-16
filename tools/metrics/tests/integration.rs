@@ -153,7 +153,7 @@ async fn publish_and_check(events: &[Event], subject: Subject, expected: &str) {
     let initial_metrics_port = setup();
     let metrics_port: Arc<Mutex<u16>> = Arc::new(Mutex::new(initial_metrics_port));
 
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_server.port).await;
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);

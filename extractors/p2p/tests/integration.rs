@@ -130,7 +130,7 @@ async fn check(
     check_expected: fn(PeerObserverEvent) -> bool,
 ) {
     let p2p_extractor_port = setup();
-    let nats_server = NatsServerForTesting::new().await;
+    let nats_server = NatsServerForTesting::new(&[]).await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let p2p_extractor_handle = tokio::spawn(async move {
