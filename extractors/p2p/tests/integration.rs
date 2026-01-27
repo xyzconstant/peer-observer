@@ -20,7 +20,7 @@ use shared::{
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
     tokio::{
-        self,
+        self, select,
         sync::watch,
         time::{Duration, sleep},
     },
@@ -39,6 +39,9 @@ static NEXT_P2PEXTRACTOR_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
 // 1 second ping interval for fast tests
 const PING_INTERVAL_SECONDS: u64 = 1;
+
+// 10 second check() timeout.
+const TEST_TIMEOUT_SECONDS: u64 = 10;
 
 fn setup() -> u16 {
     INIT.call_once(|| {
@@ -187,13 +190,19 @@ async fn check(
     test_setup(&node);
     sleep(Duration::from_secs(1)).await;
 
-    while let Some(msg) = sub.next().await {
-        let unwrapped = Event::decode(msg.payload).unwrap();
-        if let Some(event) = unwrapped.peer_observer_event
-            && check_expected(event)
-        {
-            break;
+    select! {
+        _ = sleep(Duration::from_secs(TEST_TIMEOUT_SECONDS)) => {
+            panic!("timed out waiting for check() to complete");
         }
+        _ = async { while let Some(msg) = sub.next().await {
+                let unwrapped = Event::decode(msg.payload).unwrap();
+                if let Some(event) = unwrapped.peer_observer_event
+                    && check_expected(event)
+                {
+                    break;
+                }
+            }
+        } => {},
     }
 
     shutdown_tx.send(true).unwrap();
@@ -504,4 +513,25 @@ mod p2p_client {
             eprintln!("failed to open connection");
         }
     }
+}
+
+#[tokio::test]
+#[should_panic(expected = "timed out waiting for check() to complete")]
+async fn test_integration_p2p_testsshouldtimeout() {
+    println!("test that we timeout long running tests");
+
+    check(
+        true,
+        true,
+        true,
+        true,
+        |_node| {},
+        |event| match event {
+            PeerObserverEvent::P2pExtractor(_) => {
+                panic!("Didn't expect a P2P event");
+            }
+            _ => panic!("unexpected event {:?}", event),
+        },
+    )
+    .await;
 }
