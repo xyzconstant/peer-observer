@@ -1,3 +1,4 @@
+use bitcoin::FeeRate;
 use corepc_client::types::v17::{
     GetMemoryInfoStats as RPCGetMemoryInfoStats, GetNetTotals as RPCGetNetTotals,
     UploadTarget as RPCUploadTarget,
@@ -9,17 +10,26 @@ use corepc_client::types::v26::{
 };
 use corepc_client::types::v28::{GetNetworkInfo, GetNetworkInfoAddress, GetNetworkInfoNetwork};
 use corepc_client::types::v29::GetBlockchainInfo;
-use corepc_client::types::v30::GetMempoolInfo;
 
 // Types that don't have a generic model type in corepc (yet).
 use corepc_client::types::v28::{GetRawAddrMan, RawAddrManEntry};
 
 // TODO: Ideally, all type imports should use the generic mtype types.
-use corepc_node::mtype::{GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry};
+use corepc_node::mtype::{GetMempoolInfo, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry};
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
+
+pub trait FeeRateExt {
+    fn to_sat_per_vb_f64(self) -> f64;
+}
+
+impl FeeRateExt for bitcoin::FeeRate {
+    fn to_sat_per_vb_f64(self) -> f64 {
+        self.to_sat_per_kwu() as f64 / 1000.0 / 4.0
+    }
+}
 
 // structs are generated via the rpc_extractor.proto file
 include!(concat!(env!("OUT_DIR"), "/rpc_extractor.rs"));
@@ -114,19 +124,26 @@ impl From<RPCPeerInfo> for PeerInfo {
 impl From<GetMempoolInfo> for MempoolInfo {
     fn from(info: GetMempoolInfo) -> Self {
         MempoolInfo {
-            bytes: info.bytes,
-            fullrbf: info.full_rbf,
-            incrementalrelayfee: info.incremental_relay_fee,
-            loaded: info.loaded,
-            max_mempool: info.max_mempool,
-            mempoolminfee: info.mempool_min_fee,
-            minrelaytxfee: info.min_relay_tx_fee,
-            size: info.size,
-            total_fee: info.total_fee,
-            usage: info.usage,
-            unbroadcastcount: info.unbroadcast_count,
-            // maxdatacarriersize: info.max_datacarrier_size,
-            // permitbaremultisig: info.permit_bare_multisig,
+            bytes: info.bytes as i64,
+            fullrbf: info.full_rbf.unwrap_or_default(),
+            incrementalrelayfee: info
+                .incremental_relay_fee
+                .unwrap_or(FeeRate::ZERO)
+                .to_sat_per_vb_f64(),
+            loaded: info.loaded.unwrap_or_default(),
+            max_mempool: info.max_mempool as i64,
+            mempoolminfee: info
+                .mempool_min_fee
+                .unwrap_or(FeeRate::ZERO)
+                .to_sat_per_vb_f64(),
+            minrelaytxfee: info
+                .min_relay_tx_fee
+                .unwrap_or(FeeRate::ZERO)
+                .to_sat_per_vb_f64(),
+            size: info.size as i64,
+            total_fee: info.total_fee.unwrap_or_default(),
+            usage: info.usage as i64,
+            unbroadcastcount: info.unbroadcast_count.unwrap_or_default() as i64,
         }
     }
 }

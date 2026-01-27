@@ -333,7 +333,7 @@ async fn getmempoolinfo(
     rpc_client: &Client,
     nats_client: &async_nats::Client,
 ) -> Result<(), FetchOrPublishError> {
-    let mempool_info = rpc_client.get_mempool_info()?;
+    let mempool_info = rpc_client.get_mempool_info()?.into_model()?;
 
     let proto = Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
         rpc_event: Some(rpc_extractor::rpc::RpcEvent::MempoolInfo(

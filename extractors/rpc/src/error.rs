@@ -7,7 +7,7 @@ use std::fmt;
 use std::io;
 use std::time::SystemTimeError;
 
-use shared::corepc_client::types::v30::GetOrphanTxsVerboseTwoEntryError;
+use shared::corepc_client::types::v30::{GetMempoolInfoError, GetOrphanTxsVerboseTwoEntryError};
 
 #[derive(Debug)]
 pub enum FetchOrPublishError {
@@ -15,6 +15,7 @@ pub enum FetchOrPublishError {
     SystemTime(SystemTimeError),
     NatsPublish(async_nats::error::Error<async_nats::client::PublishErrorKind>),
     OrphanTxsModel(GetOrphanTxsVerboseTwoEntryError),
+    MempoolInfoModel(GetMempoolInfoError),
 }
 
 impl fmt::Display for FetchOrPublishError {
@@ -25,6 +26,9 @@ impl fmt::Display for FetchOrPublishError {
             FetchOrPublishError::NatsPublish(e) => write!(f, "NATS publish error {}", e),
             FetchOrPublishError::OrphanTxsModel(e) => {
                 write!(f, "model error for `getorphantxs` RPC: {}", e)
+            }
+            FetchOrPublishError::MempoolInfoModel(e) => {
+                write!(f, "model error for `getmempoolinfo` RPC: {}", e)
             }
         }
     }
@@ -37,6 +41,7 @@ impl error::Error for FetchOrPublishError {
             FetchOrPublishError::SystemTime(ref e) => Some(e),
             FetchOrPublishError::NatsPublish(ref e) => Some(e),
             FetchOrPublishError::OrphanTxsModel(ref e) => Some(e),
+            FetchOrPublishError::MempoolInfoModel(ref e) => Some(e),
         }
     }
 }
@@ -62,6 +67,12 @@ impl From<async_nats::error::Error<async_nats::client::PublishErrorKind>> for Fe
 impl From<GetOrphanTxsVerboseTwoEntryError> for FetchOrPublishError {
     fn from(e: GetOrphanTxsVerboseTwoEntryError) -> Self {
         FetchOrPublishError::OrphanTxsModel(e)
+    }
+}
+
+impl From<GetMempoolInfoError> for FetchOrPublishError {
+    fn from(e: GetMempoolInfoError) -> Self {
+        FetchOrPublishError::MempoolInfoModel(e)
     }
 }
 
