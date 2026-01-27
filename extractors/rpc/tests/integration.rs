@@ -22,7 +22,7 @@ use shared::{
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
     tokio::{
-        self,
+        self, select,
         sync::watch,
         time::{Duration, sleep},
     },
@@ -37,6 +37,9 @@ static INIT: Once = Once::new();
 
 // 1 second query interval for fast tests
 const QUERY_INTERVAL_SECONDS: u64 = 1;
+
+// 5 second check() timeout.
+const TEST_TIMEOUT_SECONDS: u64 = 5;
 
 fn setup() {
     INIT.call_once(|| {
@@ -118,7 +121,6 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
     (node1, node2)
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn check(
     rpcs: EnabledRPCsInTest,
     test_setup: fn(&corepc_node::Node, &corepc_node::Node),
@@ -148,11 +150,19 @@ async fn check(
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
 
-    while let Some(msg) = sub.next().await {
-        let unwrapped = Event::decode(msg.payload).unwrap();
-        if let Some(event) = unwrapped.peer_observer_event {
-            check_expected(event);
-            break;
+    select! {
+        _ = sleep(Duration::from_secs(TEST_TIMEOUT_SECONDS)) => {
+            panic!("timed out waiting for check() to complete");
+        }
+        msg = sub.next() => {
+            if let Some(msg) = msg {
+                let unwrapped = Event::decode(msg.payload).unwrap();
+                if let Some(event) = unwrapped.peer_observer_event {
+                    check_expected(event);
+                }
+            } else {
+                panic!("subscription ended");
+            }
         }
     }
 
@@ -570,6 +580,26 @@ async fn test_integration_rpc_getorphantxs() {
                         _ => panic!("unexpected RPC data {:?}", r.rpc_event),
                     }
                 }
+            }
+            _ => panic!("unexpected event {:?}", event),
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+#[should_panic(expected = "timed out waiting for check() to complete")]
+async fn test_integration_rpc_testsshouldtimeout() {
+    println!("test that we timeout long running tests");
+
+    check(
+        EnabledRPCsInTest {
+            ..Default::default()
+        },
+        |_, _| (),
+        |event| match event {
+            PeerObserverEvent::RpcExtractor(_) => {
+                panic!("We should never receive an event here.")
             }
             _ => panic!("unexpected event {:?}", event),
         },
