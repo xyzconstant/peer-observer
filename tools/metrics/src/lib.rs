@@ -753,11 +753,18 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
                 port_count: BTreeMap<u16, i64>,
                 servicebit_count: BTreeMap<u8, i64>,
                 service_count: BTreeMap<u64, i64>,
+                distinct_asns: i64,
+                distinct_sources: i64,
+                distinct_source_asn: i64,
             }
 
             impl TableStats {
                 fn new(table: &HashMap<u32, AddrmanBucket>) -> TableStats {
                     let mut table_stats = TableStats::default();
+
+                    let mut asns: BTreeSet<u32> = BTreeSet::new();
+                    let mut sources: BTreeSet<String> = BTreeSet::new();
+                    let mut source_asn: BTreeSet<u32> = BTreeSet::new();
 
                     for (_, bucket) in table.iter() {
                         for (_, entry) in bucket.entries.iter() {
@@ -782,8 +789,17 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
                                 .entry(entry.services)
                                 .and_modify(|c| *c += 1)
                                 .or_insert(1);
+
+                            asns.insert(entry.mapped_as.unwrap_or_default());
+                            sources.insert(entry.source.clone());
+                            source_asn.insert(entry.source_mapped_as.unwrap_or_default());
                         }
                     }
+
+                    table_stats.distinct_asns = asns.len() as i64;
+                    table_stats.distinct_sources = sources.len() as i64;
+                    table_stats.distinct_source_asn = source_asn.len() as i64;
+
                     table_stats
                 }
             }
@@ -791,13 +807,38 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
             let new = TableStats::new(&addrman.new);
             let tried = TableStats::new(&addrman.tried);
 
+            metrics
+                .rpc_getrawaddrman_distinct_asns
+                .with_label_values(&["new"])
+                .set(new.distinct_asns);
+            metrics
+                .rpc_getrawaddrman_distinct_asns
+                .with_label_values(&["tried"])
+                .set(tried.distinct_asns);
+            metrics
+                .rpc_getrawaddrman_distinct_sources
+                .with_label_values(&["new"])
+                .set(new.distinct_sources);
+            metrics
+                .rpc_getrawaddrman_distinct_sources
+                .with_label_values(&["tried"])
+                .set(tried.distinct_sources);
+            metrics
+                .rpc_getrawaddrman_distinct_source_asn
+                .with_label_values(&["new"])
+                .set(new.distinct_source_asn);
+            metrics
+                .rpc_getrawaddrman_distinct_source_asn
+                .with_label_values(&["tried"])
+                .set(tried.distinct_source_asn);
+
             for (port, count) in new.port_count.iter() {
                 metrics
                     .rpc_getrawaddrman_ports
                     .with_label_values(&["new", &port.to_string()])
                     .set(*count);
             }
-            for (port, count) in tried.servicebit_count.iter() {
+            for (port, count) in tried.port_count.iter() {
                 metrics
                     .rpc_getrawaddrman_ports
                     .with_label_values(&["tried", &port.to_string()])
@@ -817,13 +858,13 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
                     .set(*count);
             }
 
-            for (services, count) in new.port_count.iter() {
+            for (services, count) in new.service_count.iter() {
                 metrics
                     .rpc_getrawaddrman_services
                     .with_label_values(&["new", &services.to_string()])
                     .set(*count);
             }
-            for (services, count) in tried.port_count.iter() {
+            for (services, count) in tried.service_count.iter() {
                 metrics
                     .rpc_getrawaddrman_services
                     .with_label_values(&["tried", &services.to_string()])
