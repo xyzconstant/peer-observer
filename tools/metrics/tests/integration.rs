@@ -2532,7 +2532,7 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
                 rpc_event: Some(rpc_extractor::rpc::RpcEvent::PeerInfos(PeerInfos {
                     infos: vec![
                         // The first two peers are from the same /16 (123.123.*) and
-                        // the third peer is from a distict (234.234.*) subnet. This results
+                        // the third peer is from a distinct (234.234.*) subnet. This results
                         // in a 2/3 diversity metric.
                         PeerInfo {
                             addr_processed: 1234,
@@ -3043,6 +3043,20 @@ async fn test_integration_metrics_rpc_getrawaddrman() {
             source_mapped_as: Some(2345),
         },
     );
+    new_bucket.entries.insert(
+        1,
+        AddrmanEntry {
+            address: "1.2.3.4".to_string(),
+            mapped_as: Some(1234),
+            port: 1234,
+            network: "ipv4".to_string(),
+            services: 3081,
+            time: 1767366315,
+            source: "2.3.4.5".to_string(),
+            source_network: "ipv4".to_string(),
+            source_mapped_as: Some(2345),
+        },
+    );
     new.insert(4, new_bucket);
 
     publish_and_check(
@@ -3057,12 +3071,18 @@ async fn test_integration_metrics_rpc_getrawaddrman() {
         ],
         Subject::Rpc,
         r#"
-        peerobserver_rpc_getrawaddrman_ports{port="1234",table="new"} 1
-        peerobserver_rpc_getrawaddrman_service_bits{service_bit="1",table="new"} 1
-        peerobserver_rpc_getrawaddrman_service_bits{service_bit="11",table="new"} 1
-        peerobserver_rpc_getrawaddrman_service_bits{service_bit="12",table="new"} 1
-        peerobserver_rpc_getrawaddrman_service_bits{service_bit="4",table="new"} 1
-        peerobserver_rpc_getrawaddrman_services{service="1234",table="new"} 1
+            peerobserver_rpc_getrawaddrman_distinct_asns{table="new"} 1
+            peerobserver_rpc_getrawaddrman_distinct_asns{table="tried"} 0
+            peerobserver_rpc_getrawaddrman_distinct_source_asn{table="new"} 1
+            peerobserver_rpc_getrawaddrman_distinct_source_asn{table="tried"} 0
+            peerobserver_rpc_getrawaddrman_distinct_sources{table="new"} 1
+            peerobserver_rpc_getrawaddrman_distinct_sources{table="tried"} 0
+            peerobserver_rpc_getrawaddrman_ports{port="1234",table="new"} 2
+            peerobserver_rpc_getrawaddrman_service_bits{service_bit="1",table="new"} 2
+            peerobserver_rpc_getrawaddrman_service_bits{service_bit="11",table="new"} 2
+            peerobserver_rpc_getrawaddrman_service_bits{service_bit="12",table="new"} 2
+            peerobserver_rpc_getrawaddrman_service_bits{service_bit="4",table="new"} 2
+            peerobserver_rpc_getrawaddrman_services{service="3081",table="new"} 2
         "#,
     )
     .await;

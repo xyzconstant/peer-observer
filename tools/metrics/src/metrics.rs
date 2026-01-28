@@ -341,7 +341,9 @@ pub struct Metrics {
     pub rpc_getrawaddrman_ports: IntGaugeVec,
     pub rpc_getrawaddrman_services: IntGaugeVec,
     pub rpc_getrawaddrman_service_bits: IntGaugeVec,
-    // distinct entries by asn, source, source_asn
+    pub rpc_getrawaddrman_distinct_asns: IntGaugeVec,
+    pub rpc_getrawaddrman_distinct_sources: IntGaugeVec,
+    pub rpc_getrawaddrman_distinct_source_asn: IntGaugeVec,
 
     // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
@@ -547,6 +549,9 @@ impl Metrics {
         igv!(rpc_getrawaddrman_ports, "Number of occurences per port in addrman by table.", ["table", "port"], registry);
         igv!(rpc_getrawaddrman_service_bits, "Number of occurences per service bit in addrman by table.", ["table", "service_bit"], registry);
         igv!(rpc_getrawaddrman_services, "Number of occurences per services in addrman by table.", ["table", "service"], registry);
+        igv!(rpc_getrawaddrman_distinct_asns, "Number of distinct ASNs in addrman by table.", ["table"], registry);
+        igv!(rpc_getrawaddrman_distinct_sources, "Number of distinct sources in addrman by table.", ["table"], registry);
+        igv!(rpc_getrawaddrman_distinct_source_asn, "Number of distinct sources in addrman by table.", ["table"], registry);
 
         // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
@@ -748,6 +753,9 @@ impl Metrics {
             rpc_getrawaddrman_ports,
             rpc_getrawaddrman_services,
             rpc_getrawaddrman_service_bits,
+            rpc_getrawaddrman_distinct_asns,
+            rpc_getrawaddrman_distinct_sources,
+            rpc_getrawaddrman_distinct_source_asn,
 
             // p2p-extractor
             p2pextractor_ping_duration_nanoseconds,
