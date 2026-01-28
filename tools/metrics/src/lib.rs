@@ -22,7 +22,7 @@ use shared::protobuf::{
     event::{event::PeerObserverEvent, Event},
     log_extractor::{log, Log, LogDebugCategory},
     p2p_extractor::p2p,
-    rpc_extractor::rpc,
+    rpc_extractor::{rpc, AddrmanBucket},
 };
 use shared::tokio::sync::watch;
 use shared::util::{self, is_on_linkinglion_banlist};
@@ -743,7 +743,93 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
                 metrics.rpc_chaintxstats_tx_rate.set(tx_rate);
             }
         }
-        rpc::RpcEvent::Addrman(_addrman) => (),
+        rpc::RpcEvent::Addrman(addrman) => {
+            metrics.rpc_getrawaddrman_ports.reset();
+            metrics.rpc_getrawaddrman_services.reset();
+            metrics.rpc_getrawaddrman_service_bits.reset();
+
+            #[derive(Default)]
+            struct TableStats {
+                port_count: BTreeMap<u16, i64>,
+                servicebit_count: BTreeMap<u8, i64>,
+                service_count: BTreeMap<u64, i64>,
+            }
+
+            impl TableStats {
+                fn new(table: &HashMap<u32, AddrmanBucket>) -> TableStats {
+                    let mut table_stats = TableStats::default();
+
+                    for (_, bucket) in table.iter() {
+                        for (_, entry) in bucket.entries.iter() {
+                            table_stats
+                                .port_count
+                                .entry(entry.port as u16)
+                                .and_modify(|c| *c += 1)
+                                .or_insert(1);
+
+                            for bit in 0..64 {
+                                if entry.services & 1 << bit > 0 {
+                                    table_stats
+                                        .servicebit_count
+                                        .entry(bit + 1)
+                                        .and_modify(|c| *c += 1)
+                                        .or_insert(1);
+                                }
+                            }
+
+                            table_stats
+                                .service_count
+                                .entry(entry.services)
+                                .and_modify(|c| *c += 1)
+                                .or_insert(1);
+                        }
+                    }
+                    table_stats
+                }
+            }
+
+            let new = TableStats::new(&addrman.new);
+            let tried = TableStats::new(&addrman.tried);
+
+            for (port, count) in new.port_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_ports
+                    .with_label_values(&["new", &port.to_string()])
+                    .set(*count);
+            }
+            for (port, count) in tried.servicebit_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_ports
+                    .with_label_values(&["tried", &port.to_string()])
+                    .set(*count);
+            }
+
+            for (servicebit, count) in new.servicebit_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_service_bits
+                    .with_label_values(&["new", &servicebit.to_string()])
+                    .set(*count);
+            }
+            for (servicebit, count) in tried.servicebit_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_service_bits
+                    .with_label_values(&["tried", &servicebit.to_string()])
+                    .set(*count);
+            }
+
+            for (services, count) in new.port_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_services
+                    .with_label_values(&["new", &services.to_string()])
+                    .set(*count);
+            }
+            for (services, count) in tried.port_count.iter() {
+                metrics
+                    .rpc_getrawaddrman_services
+                    .with_label_values(&["tried", &services.to_string()])
+                    .set(*count);
+            }
+        }
     }
 }
 

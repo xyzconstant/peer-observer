@@ -338,6 +338,11 @@ pub struct Metrics {
     pub rpc_getorphantxs_removed_count: IntCounter,
     pub rpc_getorphantxs_removed_bytes: IntCounter,
 
+    pub rpc_getrawaddrman_ports: IntGaugeVec,
+    pub rpc_getrawaddrman_services: IntGaugeVec,
+    pub rpc_getrawaddrman_service_bits: IntGaugeVec,
+    // distinct entries by asn, source, source_asn
+
     // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
     pub p2pextractor_addrv2relay_addresses: IntCounterVec,
@@ -525,6 +530,7 @@ impl Metrics {
         ig!(rpc_blockchaininfo_prune_target_size, "The target size used by pruning (set to 0 if automatic pruning is disabled).", registry);
         ig!(rpc_blockchaininfo_warnings, "Number of warnings from getblockchaininfo.", registry);
 
+        // getorphantxs
         ig!(rpc_getorphantxs_count, "Number of transactions in the orphanage.", registry);
         ig!(rpc_getorphantxs_bytes, "The serialized transaction size in bytes in the orphanage.", registry);
         ig!(rpc_getorphantxs_vsize, "The virtual transaction size in bytes in the orphanage.", registry);
@@ -536,6 +542,11 @@ impl Metrics {
         g!(rpc_getorphantxs_from_mean, "The mean of peers the transactions were received from.", registry);
         ig!(rpc_getorphantxs_from_min, "The min of peers a transaction was received from.", registry);
         ig!(rpc_getorphantxs_from_max, "The max of peers a transaction was received from.", registry);
+
+        // getrawaddrman
+        igv!(rpc_getrawaddrman_ports, "Number of occurences per port in addrman by table.", ["table", "port"], registry);
+        igv!(rpc_getrawaddrman_service_bits, "Number of occurences per service bit in addrman by table.", ["table", "service_bit"], registry);
+        igv!(rpc_getrawaddrman_services, "Number of occurences per services in addrman by table.", ["table", "service"], registry);
 
         // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
@@ -732,6 +743,11 @@ impl Metrics {
             rpc_getorphantxs_added_bytes,
             rpc_getorphantxs_removed_count,
             rpc_getorphantxs_removed_bytes,
+
+            // getrawaddrman
+            rpc_getrawaddrman_ports,
+            rpc_getrawaddrman_services,
+            rpc_getrawaddrman_service_bits,
 
             // p2p-extractor
             p2pextractor_ping_duration_nanoseconds,

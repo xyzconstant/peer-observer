@@ -29,9 +29,9 @@ use shared::{
         log_extractor::{self, LogDebugCategory},
         p2p_extractor,
         rpc_extractor::{
-            self, AddrManInfo, AddrManInfoNetwork, BlockchainInfo, ChainTxStats, MemoryInfo,
-            MempoolInfo, NetTotals, NetworkInfo, NetworkInfoNetwork, OrphanTx, OrphanTxs, PeerInfo,
-            PeerInfos, UploadTarget,
+            self, AddrManInfo, AddrManInfoNetwork, Addrman, AddrmanBucket, AddrmanEntry,
+            BlockchainInfo, ChainTxStats, MemoryInfo, MempoolInfo, NetTotals, NetworkInfo,
+            NetworkInfoNetwork, OrphanTx, OrphanTxs, PeerInfo, PeerInfos, UploadTarget,
         },
     },
     rand::{self, Rng},
@@ -3016,6 +3016,53 @@ async fn test_integration_metrics_rpc_chaintxstats() {
         peerobserver_rpc_chaintxstats_window_tx_count 2635071
         peerobserver_rpc_chaintxstats_window_interval 13305840
         peerobserver_rpc_chaintxstats_tx_rate 5.049518589821679
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_rpc_getrawaddrman() {
+    println!("test that the getrawaddrman metrics work");
+
+    let mut new: HashMap<u32, AddrmanBucket> = HashMap::new();
+    let mut new_bucket: AddrmanBucket = AddrmanBucket {
+        entries: HashMap::new(),
+    };
+    new_bucket.entries.insert(
+        0,
+        AddrmanEntry {
+            address: "1.2.3.4".to_string(),
+            mapped_as: Some(1234),
+            port: 1234,
+            network: "ipv4".to_string(),
+            services: 3081,
+            time: 1767366315,
+            source: "2.3.4.5".to_string(),
+            source_network: "ipv4".to_string(),
+            source_mapped_as: Some(2345),
+        },
+    );
+    new.insert(4, new_bucket);
+
+    publish_and_check(
+        &[
+            Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
+                rpc_event: Some(rpc_extractor::rpc::RpcEvent::Addrman(Addrman {
+                    new,
+                    tried: HashMap::new(),
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Rpc,
+        r#"
+        peerobserver_rpc_getrawaddrman_ports{port="1234",table="new"} 1
+        peerobserver_rpc_getrawaddrman_service_bits{service_bit="1",table="new"} 1
+        peerobserver_rpc_getrawaddrman_service_bits{service_bit="11",table="new"} 1
+        peerobserver_rpc_getrawaddrman_service_bits{service_bit="12",table="new"} 1
+        peerobserver_rpc_getrawaddrman_service_bits{service_bit="4",table="new"} 1
+        peerobserver_rpc_getrawaddrman_services{service="1234",table="new"} 1
         "#,
     )
     .await;
