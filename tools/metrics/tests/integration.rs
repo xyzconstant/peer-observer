@@ -3089,6 +3089,111 @@ async fn test_integration_metrics_rpc_getrawaddrman() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_rpc_getrawaddrman_changes() {
+    println!("test that the getrawaddrman changes (delta between curr and prev) metrics work");
+
+    let mut new: HashMap<u32, AddrmanBucket> = HashMap::new();
+    let mut new_bucket: AddrmanBucket = AddrmanBucket {
+        entries: HashMap::new(),
+    };
+    new_bucket.entries.insert(
+        0,
+        AddrmanEntry {
+            address: "1.2.3.4".to_string(),
+            mapped_as: Some(1234),
+            port: 1234,
+            network: "ipv4".to_string(),
+            services: 3081,
+            time: 1767366315,
+            source: "2.3.4.5".to_string(),
+            source_network: "ipv4".to_string(),
+            source_mapped_as: Some(2345),
+        },
+    );
+    new_bucket.entries.insert(
+        1,
+        AddrmanEntry {
+            address: "1.2.3.4".to_string(),
+            mapped_as: Some(1234),
+            port: 1234,
+            network: "ipv4".to_string(),
+            services: 3081,
+            time: 1767366315,
+            source: "2.3.4.5".to_string(),
+            source_network: "ipv4".to_string(),
+            source_mapped_as: Some(2345),
+        },
+    );
+    new.insert(4, new_bucket);
+
+    let tried = new.clone();
+    let mut new2 = new.clone();
+
+    if let Some(bucket) = new2.get_mut(&4) {
+        bucket.entries.insert(
+            0,
+            AddrmanEntry {
+                address: "4.4.4.4".to_string(), // This changed, which is a "replacement"
+                mapped_as: Some(1234),
+                port: 1234,
+                network: "ipv4".to_string(),
+                services: 3081,   // This changed!
+                time: 1767366315, // This changed!
+                source: "2.3.4.5".to_string(),
+                source_network: "ipv4".to_string(),
+                source_mapped_as: Some(2345),
+            },
+        );
+
+        bucket.entries.insert(
+            1,
+            AddrmanEntry {
+                address: "1.2.3.4".to_string(),
+                mapped_as: Some(1234),
+                port: 1234,
+                network: "ipv4".to_string(),
+                services: 111111, // This changed!
+                time: 111111111,  // This changed!
+                source: "2.3.4.5".to_string(),
+                source_network: "ipv4".to_string(),
+                source_mapped_as: Some(2345),
+            },
+        );
+    }
+
+    publish_and_check(
+        &[
+            Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
+                rpc_event: Some(rpc_extractor::rpc::RpcEvent::Addrman(Addrman {
+                    new,
+                    tried: HashMap::new(),
+                })),
+            }))
+            .unwrap(),
+            Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
+                rpc_event: Some(rpc_extractor::rpc::RpcEvent::Addrman(Addrman {
+                    new: new2, // timestamp and service changes here and one replacement here
+                    tried,     // The two tried table entries were added
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Rpc,
+        r#"
+            peerobserver_rpc_getrawaddrman_added_entry{table="new"} 0
+            peerobserver_rpc_getrawaddrman_added_entry{table="tried"} 2
+            peerobserver_rpc_getrawaddrman_changed_services{table="new"} 1
+            peerobserver_rpc_getrawaddrman_changed_services{table="tried"} 0
+            peerobserver_rpc_getrawaddrman_changed_timestamps{table="new"} 1
+            peerobserver_rpc_getrawaddrman_changed_timestamps{table="tried"} 0
+            peerobserver_rpc_getrawaddrman_replaced_entry{table="new"} 1
+            peerobserver_rpc_getrawaddrman_replaced_entry{table="tried"} 0
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_p2pextractor_ping_duration() {
     println!("test that p2p-extractor ping duration metrics work");
 

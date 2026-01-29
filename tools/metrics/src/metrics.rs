@@ -338,12 +338,17 @@ pub struct Metrics {
     pub rpc_getorphantxs_removed_count: IntCounter,
     pub rpc_getorphantxs_removed_bytes: IntCounter,
 
+    // getrawaddrman
     pub rpc_getrawaddrman_ports: IntGaugeVec,
     pub rpc_getrawaddrman_services: IntGaugeVec,
     pub rpc_getrawaddrman_service_bits: IntGaugeVec,
     pub rpc_getrawaddrman_distinct_asns: IntGaugeVec,
     pub rpc_getrawaddrman_distinct_sources: IntGaugeVec,
     pub rpc_getrawaddrman_distinct_source_asn: IntGaugeVec,
+    pub rpc_getrawaddrman_added_entry: IntCounterVec,
+    pub rpc_getrawaddrman_replaced_entry: IntCounterVec,
+    pub rpc_getrawaddrman_changed_services: IntCounterVec,
+    pub rpc_getrawaddrman_changed_timestamps: IntCounterVec,
 
     // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
@@ -552,6 +557,10 @@ impl Metrics {
         igv!(rpc_getrawaddrman_distinct_asns, "Number of distinct ASNs in addrman by table.", ["table"], registry);
         igv!(rpc_getrawaddrman_distinct_sources, "Number of distinct sources in addrman by table.", ["table"], registry);
         igv!(rpc_getrawaddrman_distinct_source_asn, "Number of distinct sources in addrman by table.", ["table"], registry);
+        icv!(rpc_getrawaddrman_added_entry, "Number of entries added since the last fetch to the addrman by table.", ["table"], registry);
+        icv!(rpc_getrawaddrman_replaced_entry, "Number of entries replaced (by bucket/position) since the last fetch to the addrman by table.", ["table"], registry);
+        icv!(rpc_getrawaddrman_changed_services, "Number of entries where the services changed since the last fetch to the addrman by table.", ["table"], registry);
+        icv!(rpc_getrawaddrman_changed_timestamps, "Number of entries where the timestamp changed since the last fetch to the addrman by table.", ["table"], registry);
 
         // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
@@ -756,6 +765,10 @@ impl Metrics {
             rpc_getrawaddrman_distinct_asns,
             rpc_getrawaddrman_distinct_sources,
             rpc_getrawaddrman_distinct_source_asn,
+            rpc_getrawaddrman_added_entry,
+            rpc_getrawaddrman_replaced_entry,
+            rpc_getrawaddrman_changed_timestamps,
+            rpc_getrawaddrman_changed_services,
 
             // p2p-extractor
             p2pextractor_ping_duration_nanoseconds,
