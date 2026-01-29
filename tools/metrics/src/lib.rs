@@ -22,7 +22,7 @@ use shared::protobuf::{
     event::{event::PeerObserverEvent, Event},
     log_extractor::{log, Log, LogDebugCategory},
     p2p_extractor::p2p,
-    rpc_extractor::{rpc, AddrmanBucket},
+    rpc_extractor::{rpc, Addrman, AddrmanBucket},
 };
 use shared::tokio::sync::watch;
 use shared::util::{self, is_on_linkinglion_banlist};
@@ -70,6 +70,7 @@ impl Args {
 struct State {
     // Map of wtxid to bytes
     orphanage: HashMap<String, u64>,
+    addrman: Addrman,
 }
 
 /// runs the metrics tool
@@ -870,6 +871,111 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
                     .with_label_values(&["tried", &services.to_string()])
                     .set(*count);
             }
+
+            // metrics that require the previous addrman state:
+            let mut state = state_arc.lock().expect("should be able to lock state_arc");
+            // We don't want to populate the 'delta' metrics in the first run.
+            if state.addrman != Addrman::default() {
+                #[derive(Default)]
+                struct TabelChanges {
+                    added: u64,             // Count of the entries (by bucket/position) that were added.
+                    replaced: u64, // Count of the entries (by ubcket/position) that changed address:port.
+                    changed_service: u64, // Count of the entries where the address:port remained the same, but the service changed.
+                    changed_timestamp: u64, // Count of the entries where the address:port remained the same, but the timestamp changed.
+                }
+
+                impl TabelChanges {
+                    fn new(
+                        curr: &HashMap<u32, AddrmanBucket>,
+                        prev: &HashMap<u32, AddrmanBucket>,
+                    ) -> TabelChanges {
+                        let mut table_changes = TabelChanges::default();
+
+                        // We assume that an addrman entry can not be removed, just replaced.
+                        // This means, by iterating through the current addrman and looking for the current
+                        // entries in the previous one, we can find out if it was added in the current, replaced, one
+                        // or if parts of it were changed.
+                        for (bucket_id, curr_bucket) in curr.iter() {
+                            if !prev.contains_key(bucket_id) {
+                                // If the bucket id is NOT in the previous table, then all
+                                // entries in the current one are new.
+                                table_changes.added += curr_bucket.entries.len() as u64;
+                            } else {
+                                let prev_bucket = prev
+                                    .get(bucket_id)
+                                    .expect("The previous table should have this bucket.");
+                                for (pos, curr_entry) in curr_bucket.entries.iter() {
+                                    if !prev_bucket.entries.contains_key(pos) {
+                                        // If the current bucket contains something somewhere that the
+                                        // previous bucket didn't contain, it has been added.
+                                        table_changes.added += 1;
+                                    } else {
+                                        let prev_entry = prev_bucket
+                                            .entries
+                                            .get(pos)
+                                            .expect("The previous bucket should have this entry.");
+                                        if !(curr_entry.address == prev_entry.address
+                                            && curr_entry.port == prev_entry.port)
+                                        {
+                                            // if the address:port don't match, the entry was replaced
+                                            table_changes.replaced += 1;
+                                        } else {
+                                            if curr_entry.time != prev_entry.time {
+                                                table_changes.changed_timestamp += 1;
+                                            }
+
+                                            if curr_entry.services != prev_entry.services {
+                                                table_changes.changed_service += 1;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        table_changes
+                    }
+                }
+
+                let new_changes = TabelChanges::new(&addrman.new, &state.addrman.new);
+                let tried_changes = TabelChanges::new(&addrman.tried, &state.addrman.tried);
+
+                metrics
+                    .rpc_getrawaddrman_added_entry
+                    .with_label_values(&["new"])
+                    .inc_by(new_changes.added);
+                metrics
+                    .rpc_getrawaddrman_added_entry
+                    .with_label_values(&["tried"])
+                    .inc_by(tried_changes.added);
+
+                metrics
+                    .rpc_getrawaddrman_replaced_entry
+                    .with_label_values(&["new"])
+                    .inc_by(new_changes.replaced);
+                metrics
+                    .rpc_getrawaddrman_replaced_entry
+                    .with_label_values(&["tried"])
+                    .inc_by(tried_changes.replaced);
+
+                metrics
+                    .rpc_getrawaddrman_changed_services
+                    .with_label_values(&["new"])
+                    .inc_by(new_changes.changed_service);
+                metrics
+                    .rpc_getrawaddrman_changed_services
+                    .with_label_values(&["tried"])
+                    .inc_by(tried_changes.changed_service);
+
+                metrics
+                    .rpc_getrawaddrman_changed_timestamps
+                    .with_label_values(&["new"])
+                    .inc_by(new_changes.changed_timestamp);
+                metrics
+                    .rpc_getrawaddrman_changed_timestamps
+                    .with_label_values(&["tried"])
+                    .inc_by(tried_changes.changed_timestamp);
+            }
+            state.addrman = addrman.clone();
         }
     }
 }
