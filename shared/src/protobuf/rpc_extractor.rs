@@ -8,14 +8,14 @@ use corepc_client::types::v26::{
     AddrManInfoNetwork as RPCAddrManInfoNetwork, GetAddrManInfo as RPCGetAddrManInfo,
     GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo,
 };
-use corepc_client::types::v28::{GetNetworkInfo, GetNetworkInfoAddress, GetNetworkInfoNetwork};
 
 // Types that don't have a generic model type in corepc (yet).
 use corepc_client::types::v28::{GetRawAddrMan, RawAddrManEntry};
 
 // TODO: Ideally, all type imports should use the generic mtype types.
 use corepc_node::mtype::{
-    GetBlockchainInfo, GetMempoolInfo, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry,
+    GetBlockchainInfo, GetMempoolInfo, GetNetworkInfo, GetNetworkInfoAddress,
+    GetNetworkInfoNetwork, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry,
 };
 
 use std::collections::BTreeMap;
@@ -241,16 +241,19 @@ impl From<GetNetworkInfo> for NetworkInfo {
             subversion: info.subversion,
             protocol_version: info.protocol_version as i32,
             local_services: info.local_services,
-            local_services_names: info.local_services_names,
+            local_services_names: info.local_services_names.unwrap_or_default(),
             local_relay: info.local_relay,
             time_offset: info.time_offset as i32,
             connections: info.connections as u32,
-            connections_in: info.connections_in as u32,
-            connections_out: info.connections_out as u32,
+            connections_in: info.connections_in.unwrap_or_default() as u32,
+            connections_out: info.connections_out.unwrap_or_default() as u32,
             network_active: info.network_active,
             networks: info.networks.into_iter().map(|n| n.into()).collect(),
-            relay_fee: info.relay_fee,
-            incremental_fee: info.incremental_fee,
+            relay_fee: info.relay_fee.unwrap_or(FeeRate::ZERO).to_sat_per_vb_f64(),
+            incremental_fee: info
+                .incremental_fee
+                .unwrap_or(FeeRate::ZERO)
+                .to_sat_per_vb_f64(),
             local_addresses: info.local_addresses.into_iter().map(|a| a.into()).collect(),
             warnings: info.warnings,
         }
@@ -374,8 +377,8 @@ impl From<GetBlockchainInfo> for BlockchainInfo {
     fn from(info: GetBlockchainInfo) -> Self {
         BlockchainInfo {
             chain: info.chain.to_string(),
-            blocks: info.blocks as u32,
-            headers: info.headers as u32,
+            blocks: info.blocks,
+            headers: info.headers,
             bestblockhash: info.best_block_hash.to_string(),
             difficulty: info.difficulty,
             time: info.time.unwrap_or_default(),
@@ -385,7 +388,7 @@ impl From<GetBlockchainInfo> for BlockchainInfo {
             chainwork: info.chain_work.to_string(),
             size_on_disk: info.size_on_disk,
             pruned: info.pruned,
-            prune_height: info.prune_height.map(|h| h as u32).unwrap_or_default(),
+            prune_height: info.prune_height.unwrap_or_default(),
             prune_target_size: info.prune_target_size.map(|s| s as u64).unwrap_or_default(),
             warnings: info.warnings,
         }
