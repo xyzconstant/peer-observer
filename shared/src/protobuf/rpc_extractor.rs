@@ -1,16 +1,14 @@
 use bitcoin::FeeRate;
-use corepc_client::types::v17::{
-    GetMemoryInfoStats as RPCGetMemoryInfoStats, GetNetTotals as RPCGetNetTotals,
-    UploadTarget as RPCUploadTarget,
-};
-use corepc_client::types::v26::{
-    AddrManInfoNetwork as RPCAddrManInfoNetwork, GetAddrManInfo as RPCGetAddrManInfo,
-};
 
 // Types that don't have a generic model type in corepc (yet).
 // Once they have a model, move them down to the mtypes!
-use corepc_client::types::v26::{GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo};
-use corepc_client::types::v28::{GetRawAddrMan, RawAddrManEntry};
+// CORE_VERSION_GREP: When updating the corepc node crate version, bump this too.
+use corepc_client::types::v30::{
+    AddrManInfoNetwork as RPCAddrManInfoNetwork, GetAddrManInfo as RPCGetAddrManInfo,
+    GetMemoryInfoStats as RPCGetMemoryInfoStats, GetNetTotals as RPCGetNetTotals,
+    GetPeerInfo as RPCGetPeerInfo, GetRawAddrMan, PeerInfo as RPCPeerInfo, RawAddrManEntry,
+    UploadTarget as RPCUploadTarget,
+};
 
 // Ideally, all type imports should use the generic mtype types.
 use corepc_node::mtype::{

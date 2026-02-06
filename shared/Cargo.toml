@@ -26,6 +26,8 @@ regex = "1.12"
 # - cpu_load and inv_to_send in getpeerinfo
 # - and master has the fix https://github.com/rust-bitcoin/corepc/pull/483
 # (branch 2026-02-v0.11-peer-observer-custom)
+# When updating the Bitcoin Core version used, grep for CORE_VERSION_GREP
+# and update the corepc_client::types::v* to the new version.
 corepc-node = { git = "https://github.com/0xb10c/corepc", rev = "b777fa7160c7b97e1e845e771953a158233660cd", features = ["download", "30_2"] }
 corepc-client = { git = "https://github.com/0xb10c/corepc", rev = "b777fa7160c7b97e1e845e771953a158233660cd", features = ["client-sync"]}
 

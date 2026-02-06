@@ -7,7 +7,7 @@ use std::fmt;
 use std::io;
 use std::time::SystemTimeError;
 
-// Note: When updating the corepc node crate version, bump this too.
+// CORE_VERSION_GREP: When updating the corepc node crate version, bump this too.
 use shared::corepc_client::types::v30::{
     GetBlockchainInfoError, GetChainTxStatsError, GetMempoolInfoError, GetNetworkInfoError,
     GetOrphanTxsVerboseTwoEntryError,
