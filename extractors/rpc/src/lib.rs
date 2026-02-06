@@ -1,7 +1,9 @@
 use shared::clap::{ArgGroup, Parser};
 use shared::corepc_client::client_sync::Auth;
 use shared::corepc_client::client_sync::v30::Client;
-use shared::corepc_node::mtype::{GetBlockchainInfo, GetNetworkInfo, GetOrphanTxsVerboseTwo};
+use shared::corepc_node::mtype::{
+    GetBlockchainInfo, GetChainTxStats, GetNetworkInfo, GetOrphanTxsVerboseTwo,
+};
 use shared::log;
 use shared::nats_subjects::Subject;
 use shared::nats_util::{self, NatsArgs};
@@ -418,7 +420,7 @@ async fn getchaintxstats(
     rpc_client: &Client,
     nats_client: &async_nats::Client,
 ) -> Result<(), FetchOrPublishError> {
-    let chain_tx_stats = rpc_client.get_chain_tx_stats()?;
+    let chain_tx_stats: GetChainTxStats = rpc_client.get_chain_tx_stats()?.into_model()?;
 
     let proto = Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
         rpc_event: Some(rpc_extractor::rpc::RpcEvent::ChainTxStats(

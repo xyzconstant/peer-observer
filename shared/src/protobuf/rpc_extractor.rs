@@ -3,7 +3,6 @@ use corepc_client::types::v17::{
     GetMemoryInfoStats as RPCGetMemoryInfoStats, GetNetTotals as RPCGetNetTotals,
     UploadTarget as RPCUploadTarget,
 };
-use corepc_client::types::v19::GetChainTxStats as RPCGetChainTxStats;
 use corepc_client::types::v26::{
     AddrManInfoNetwork as RPCAddrManInfoNetwork, GetAddrManInfo as RPCGetAddrManInfo,
     GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo,
@@ -14,7 +13,7 @@ use corepc_client::types::v28::{GetRawAddrMan, RawAddrManEntry};
 
 // TODO: Ideally, all type imports should use the generic mtype types.
 use corepc_node::mtype::{
-    GetBlockchainInfo, GetMempoolInfo, GetNetworkInfo, GetNetworkInfoAddress,
+    GetBlockchainInfo, GetChainTxStats, GetMempoolInfo, GetNetworkInfo, GetNetworkInfoAddress,
     GetNetworkInfoNetwork, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry,
 };
 
@@ -332,13 +331,13 @@ impl From<RPCAddrManInfoNetwork> for AddrManInfoNetwork {
     }
 }
 
-impl From<RPCGetChainTxStats> for ChainTxStats {
-    fn from(stats: RPCGetChainTxStats) -> Self {
+impl From<GetChainTxStats> for ChainTxStats {
+    fn from(stats: GetChainTxStats) -> Self {
         ChainTxStats {
             time: stats.time,
             tx_count: stats.tx_count,
-            window_final_block_hash: stats.window_final_block_hash,
-            window_final_block_height: stats.window_final_block_height,
+            window_final_block_hash: stats.window_final_block_hash.to_string(),
+            window_final_block_height: stats.window_final_block_height.unwrap_or_default(),
             window_block_count: stats.window_block_count,
             window_tx_count: stats.window_tx_count,
             window_interval: stats.window_interval,

@@ -723,22 +723,22 @@ fn handle_rpc_event(e: &rpc::RpcEvent, state_arc: Arc<Mutex<State>>, metrics: me
             }
         }
         rpc::RpcEvent::ChainTxStats(stats) => {
-            metrics.rpc_chaintxstats_tx_count.set(stats.tx_count);
+            metrics.rpc_chaintxstats_tx_count.set(stats.tx_count as i64);
             metrics
                 .rpc_chaintxstats_window_final_block_height
-                .set(stats.window_final_block_height);
+                .set(stats.window_final_block_height as i64);
             metrics
                 .rpc_chaintxstats_window_block_count
-                .set(stats.window_block_count);
+                .set(stats.window_block_count as i64);
             if let Some(window_tx_count) = stats.window_tx_count {
                 metrics
                     .rpc_chaintxstats_window_tx_count
-                    .set(window_tx_count);
+                    .set(window_tx_count as i64);
             }
             if let Some(window_interval) = stats.window_interval {
                 metrics
                     .rpc_chaintxstats_window_interval
-                    .set(window_interval);
+                    .set(window_interval as i64);
             }
             if let Some(tx_rate) = stats.tx_rate {
                 metrics.rpc_chaintxstats_tx_rate.set(tx_rate);

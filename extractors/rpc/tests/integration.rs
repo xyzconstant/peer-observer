@@ -383,20 +383,32 @@ async fn test_integration_rpc_getchaintxstats() {
             getchaintxstats: true,
             ..Default::default()
         },
-        |_, _| (),
+        |node1, _| {
+            // Note: window_tx_count, window_interval, and tx_rate
+            // are only present when window_block_count > 0, which
+            // requires mining a few blocks blocks.
+            let address = node1
+                .client
+                .new_address()
+                .expect("failed to get new address");
+            node1
+                .client
+                .generate_to_address(201, &address)
+                .expect("failed to generate to address");
+        },
         |event| match event {
             PeerObserverEvent::RpcExtractor(r) => {
                 if let Some(ref e) = r.rpc_event {
                     match e {
                         ChainTxStats(stats) => {
-                            assert!(stats.time > 0);
-                            assert!(stats.tx_count > 0);
+                            assert!(stats.time > 1770395781);
+                            assert_eq!(stats.tx_count, 202);
                             assert!(!stats.window_final_block_hash.is_empty());
-                            assert!(stats.window_final_block_height >= 0);
-                            assert!(stats.window_block_count >= 0);
-                            // Note: window_tx_count, window_interval, and tx_rate
-                            // are only present when window_block_count > 0, which
-                            // requires mined blocks. Fresh regtest has 0 blocks.
+                            assert_eq!(stats.window_final_block_height, 201);
+                            assert_eq!(stats.window_block_count, 200);
+                            assert_eq!(stats.window_tx_count, Some(200));
+                            assert_eq!(stats.window_interval, Some(34));
+                            assert_eq!(stats.tx_rate, Some(5.882352941176471));
                         }
                         _ => panic!("unexpected RPC data {:?}", r.rpc_event),
                     }
