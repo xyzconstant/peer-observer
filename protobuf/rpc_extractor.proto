@@ -189,8 +189,8 @@ message BlockchainInfo {
   required uint32 headers = 3;                           // Current number of headers validated
   required string bestblockhash = 4;                     // Hash of the currently best block
   required double difficulty = 5;                        // Current difficulty
-  required uint64 time = 6;                              // Block time of the best block (UNIX timestamp)
-  required uint64 mediantime = 7;                        // Median time for the current best block
+  required uint32 time = 6;                              // Block time of the best block (UNIX timestamp)
+  required uint32 mediantime = 7;                        // Median time for the current best block
   required double verificationprogress = 8;              // Estimate of verification progress [0..1]
   required bool initialblockdownload = 9;                // Whether this node is in Initial Block Download mode
   required string chainwork = 10;                        // Total amount of work in active chain (hexadecimal)

@@ -9,13 +9,14 @@ use corepc_client::types::v26::{
     GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo,
 };
 use corepc_client::types::v28::{GetNetworkInfo, GetNetworkInfoAddress, GetNetworkInfoNetwork};
-use corepc_client::types::v29::GetBlockchainInfo;
 
 // Types that don't have a generic model type in corepc (yet).
 use corepc_client::types::v28::{GetRawAddrMan, RawAddrManEntry};
 
 // TODO: Ideally, all type imports should use the generic mtype types.
-use corepc_node::mtype::{GetMempoolInfo, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry};
+use corepc_node::mtype::{
+    GetBlockchainInfo, GetMempoolInfo, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry,
+};
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -372,16 +373,16 @@ impl fmt::Display for NetworkInfoLocalAddress {
 impl From<GetBlockchainInfo> for BlockchainInfo {
     fn from(info: GetBlockchainInfo) -> Self {
         BlockchainInfo {
-            chain: info.chain,
+            chain: info.chain.to_string(),
             blocks: info.blocks as u32,
             headers: info.headers as u32,
-            bestblockhash: info.best_block_hash,
+            bestblockhash: info.best_block_hash.to_string(),
             difficulty: info.difficulty,
-            time: info.time as u64,
-            mediantime: info.median_time as u64,
+            time: info.time.unwrap_or_default(),
+            mediantime: info.median_time,
             verificationprogress: info.verification_progress,
             initialblockdownload: info.initial_block_download,
-            chainwork: info.chain_work,
+            chainwork: info.chain_work.to_string(),
             size_on_disk: info.size_on_disk,
             pruned: info.pruned,
             prune_height: info.prune_height.map(|h| h as u32).unwrap_or_default(),

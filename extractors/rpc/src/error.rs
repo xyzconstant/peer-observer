@@ -7,7 +7,9 @@ use std::fmt;
 use std::io;
 use std::time::SystemTimeError;
 
-use shared::corepc_client::types::v30::{GetMempoolInfoError, GetOrphanTxsVerboseTwoEntryError};
+use shared::corepc_client::types::v30::{
+    GetBlockchainInfoError, GetMempoolInfoError, GetOrphanTxsVerboseTwoEntryError,
+};
 
 #[derive(Debug)]
 pub enum FetchOrPublishError {
@@ -16,6 +18,7 @@ pub enum FetchOrPublishError {
     NatsPublish(async_nats::error::Error<async_nats::client::PublishErrorKind>),
     OrphanTxsModel(GetOrphanTxsVerboseTwoEntryError),
     MempoolInfoModel(GetMempoolInfoError),
+    BlockchainInfoModel(GetBlockchainInfoError),
 }
 
 impl fmt::Display for FetchOrPublishError {
@@ -30,6 +33,9 @@ impl fmt::Display for FetchOrPublishError {
             FetchOrPublishError::MempoolInfoModel(e) => {
                 write!(f, "model error for `getmempoolinfo` RPC: {}", e)
             }
+            FetchOrPublishError::BlockchainInfoModel(e) => {
+                write!(f, "model error for `getblockchaininfo` RPC: {}", e)
+            }
         }
     }
 }
@@ -42,6 +48,7 @@ impl error::Error for FetchOrPublishError {
             FetchOrPublishError::NatsPublish(ref e) => Some(e),
             FetchOrPublishError::OrphanTxsModel(ref e) => Some(e),
             FetchOrPublishError::MempoolInfoModel(ref e) => Some(e),
+            FetchOrPublishError::BlockchainInfoModel(ref e) => Some(e),
         }
     }
 }
@@ -73,6 +80,12 @@ impl From<GetOrphanTxsVerboseTwoEntryError> for FetchOrPublishError {
 impl From<GetMempoolInfoError> for FetchOrPublishError {
     fn from(e: GetMempoolInfoError) -> Self {
         FetchOrPublishError::MempoolInfoModel(e)
+    }
+}
+
+impl From<GetBlockchainInfoError> for FetchOrPublishError {
+    fn from(e: GetBlockchainInfoError) -> Self {
+        FetchOrPublishError::BlockchainInfoModel(e)
     }
 }
 

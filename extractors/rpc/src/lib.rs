@@ -1,6 +1,7 @@
 use shared::clap::{ArgGroup, Parser};
 use shared::corepc_client::client_sync::Auth;
 use shared::corepc_client::client_sync::v30::Client;
+use shared::corepc_node::mtype::{GetBlockchainInfo, GetOrphanTxsVerboseTwo};
 use shared::log;
 use shared::nats_subjects::Subject;
 use shared::nats_util::{self, NatsArgs};
@@ -453,7 +454,7 @@ async fn getblockchaininfo(
     rpc_client: &Client,
     nats_client: &async_nats::Client,
 ) -> Result<(), FetchOrPublishError> {
-    let blockchain_info = rpc_client.get_blockchain_info()?;
+    let blockchain_info: GetBlockchainInfo = rpc_client.get_blockchain_info()?.into_model()?;
 
     let proto = Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
         rpc_event: Some(rpc_extractor::rpc::RpcEvent::BlockchainInfo(
@@ -471,8 +472,6 @@ async fn getorphantxs(
     rpc_client: &Client,
     nats_client: &async_nats::Client,
 ) -> Result<(), FetchOrPublishError> {
-    use shared::corepc_node::mtype::GetOrphanTxsVerboseTwo;
-
     let orphans: GetOrphanTxsVerboseTwo = rpc_client.get_orphan_txs_verbosity_2()?.into_model()?;
 
     let proto = Event::new(PeerObserverEvent::RpcExtractor(rpc_extractor::Rpc {
