@@ -24,9 +24,10 @@ regex = "1.12"
 
 # Use custom commit to support:
 # - cpu_load and inv_to_send in getpeerinfo
-# (branch 2026-01-v0.11-peer-observer-custom)
-corepc-node = { git = "https://github.com/0xb10c/corepc", rev = "b20f2c34f2f8baafa41a7d809349913d2ef95750", features = ["download", "30_2"] }
-corepc-client = { git = "https://github.com/0xb10c/corepc", rev = "b20f2c34f2f8baafa41a7d809349913d2ef95750", features = ["client-sync"]}
+# - and master has the fix https://github.com/rust-bitcoin/corepc/pull/483
+# (branch 2026-02-v0.11-peer-observer-custom)
+corepc-node = { git = "https://github.com/0xb10c/corepc", rev = "b777fa7160c7b97e1e845e771953a158233660cd", features = ["download", "30_2"] }
+corepc-client = { git = "https://github.com/0xb10c/corepc", rev = "b777fa7160c7b97e1e845e771953a158233660cd", features = ["client-sync"]}
 
 [build-dependencies]
 prost-build = "0.14"
