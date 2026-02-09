@@ -45,6 +45,8 @@ Options:
           Interval (in seconds) in which to query from the Bitcoin Core RPC endpoint [default: 10]
       --query-interval-less-frequent <QUERY_INTERVAL_LESS_FREQUENT>
           Interval (in seconds) in which to query resource-intensive or less frequently changing RPCs from the Bitcoin Core RPC endpoint. These currently include: - getchaintxstats (infrequent changes) - getblockchaininfo (infrequent changes) - getrawaddrman (resource intensive) [default: 120]
+      --prometheus-address <PROMETHEUS_ADDRESS>
+          Address to serve Prometheus metrics on [default: 127.0.0.1:8284]
       --disable-getpeerinfo
           Disable querying and publishing of `getpeerinfo` data
       --disable-getmempoolinfo
