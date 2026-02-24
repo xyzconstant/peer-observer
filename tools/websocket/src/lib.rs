@@ -5,7 +5,10 @@ use shared::futures::{stream::SplitSink, SinkExt, StreamExt};
 use shared::log;
 use shared::nats_util::NatsArgs;
 use shared::prost::Message;
-use shared::protobuf::event::{self, event::PeerObserverEvent};
+use shared::protobuf::{
+    ebpf_extractor::ebpf,
+    event::{self, event::PeerObserverEvent},
+};
 use shared::{
     clap, nats_util,
     tokio::{
@@ -51,8 +54,31 @@ impl Args {
     }
 }
 
-type Clients =
-    Arc<Mutex<HashMap<SocketAddr, SplitSink<WebSocketStream<TcpStream>, TungsteniteMessage>>>>;
+#[derive(Default, Debug)]
+struct ClientSubscriptionsEbpf {
+    messages: bool,
+    mempool: bool,
+    validation: bool,
+    connections: bool,
+    addrman: bool,
+}
+
+// TODO: we could do this more granular (for more detailed filtering)
+// ClientSubscriptionsEbpf is an example of more detailed filtering
+#[derive(Default, Debug)]
+struct ClientSubscriptions {
+    ebpf: ClientSubscriptionsEbpf,
+    p2p: bool,
+    log: bool,
+    rpc: bool,
+}
+
+struct Client {
+    outgoing: SplitSink<WebSocketStream<TcpStream>, TungsteniteMessage>,
+    subscriptions: ClientSubscriptions,
+}
+
+type Clients = Arc<Mutex<HashMap<SocketAddr, Client>>>;
 
 pub async fn run(
     args: Args,
@@ -74,14 +100,7 @@ pub async fn run(
                 match event::Event::decode(msg.payload) {
                     Ok(event) => {
                         if let Some(event) = event.peer_observer_event {
-                            match serde_json::to_string::<PeerObserverEvent>(&event.clone()) {
-                                Ok(msg) => {
-                                    broadcast_to_clients(&msg, &clients).await;
-                                }
-                                Err(e) => {
-                                    log::error!("Could not serialize the message to JSON: {}", e)
-                                }
-                            }
+                            broadcast_to_clients(&event, &clients).await;
                         }
                     }
                     Err(e) => log::error!("Could not deserialize protobuf message: {}", e),
@@ -141,7 +160,14 @@ async fn handle_client(
     let websocket = accept_async(stream).await?;
 
     let (outgoing, mut incoming) = websocket.split();
-    clients.lock().await.insert(addr, outgoing);
+
+    let client = Client {
+        outgoing,
+        // Clients start without any subscriptions
+        subscriptions: ClientSubscriptions::default(),
+    };
+
+    clients.lock().await.insert(addr, client);
 
     log::info!("Client '{}' connected", addr);
 
@@ -165,11 +191,40 @@ async fn handle_client(
     Ok(())
 }
 
-async fn broadcast_to_clients(message: &str, clients: &Clients) {
-    let mut clients = clients.lock().await;
+async fn broadcast_to_clients(event: &PeerObserverEvent, clients: &Clients) {
+    let message = match serde_json::to_string::<PeerObserverEvent>(&event.clone()) {
+        Ok(msg) => msg,
+        Err(e) => {
+            log::error!("Could not serialize the message to JSON: {}", e);
+            return;
+        }
+    };
 
-    for (addr, outgoing) in clients.iter_mut() {
-        if let Err(e) = outgoing.send(TungsteniteMessage::text(message)).await {
+    let mut clients = clients.lock().await;
+    for (addr, client) in clients.iter_mut() {
+        let is_subscribed = match &event {
+            PeerObserverEvent::EbpfExtractor(ebpf) => match &ebpf.ebpf_event {
+                Some(ebpf::EbpfEvent::Message(_)) => client.subscriptions.ebpf.messages,
+                Some(ebpf::EbpfEvent::Connection(_)) => client.subscriptions.ebpf.connections,
+                Some(ebpf::EbpfEvent::Addrman(_)) => client.subscriptions.ebpf.addrman,
+                Some(ebpf::EbpfEvent::Mempool(_)) => client.subscriptions.ebpf.mempool,
+                Some(ebpf::EbpfEvent::Validation(_)) => client.subscriptions.ebpf.validation,
+                None => false,
+            },
+            PeerObserverEvent::RpcExtractor(_) => client.subscriptions.rpc,
+            PeerObserverEvent::P2pExtractor(_) => client.subscriptions.p2p,
+            PeerObserverEvent::LogExtractor(_) => client.subscriptions.log,
+        };
+
+        if !is_subscribed {
+            continue;
+        }
+
+        if let Err(e) = client
+            .outgoing
+            .send(TungsteniteMessage::text(&message))
+            .await
+        {
             log::warn!("Failed to send message to client '{}': {}", addr, e);
         }
     }
