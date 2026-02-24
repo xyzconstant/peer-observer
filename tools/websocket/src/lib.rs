@@ -174,10 +174,22 @@ async fn handle_client(
     while let Some(msg) = incoming.next().await {
         match msg {
             Ok(m) => {
-                if let TungsteniteMessage::Close(_) = m {
-                    // Remove the client from the shared list if the connection is closed
-                    clients.lock().await.remove(&addr);
-                    break;
+                match m {
+                    TungsteniteMessage::Close(_) => {
+                        // Remove the client from the shared list if the connection is closed
+                        clients.lock().await.remove(&addr);
+                        break;
+                    }
+                    TungsteniteMessage::Text(text) => {
+                        log::debug!("Received message from client '{}': {}", addr, text);
+                        // TODO:
+                        // We assume the client is sending us a JSON message constisting of a ClientSubscriptions struct
+                        // Parse it here, and update the subscriptions of the client. This requires locking and updating
+                        // the client.
+                        // If we receive something we can't parse, we should print an error and close the connection to the client.
+                        // This should allow us to catch this in e.g. tests or manual testing of websocket HTML tools.
+                    }
+                    _ => (),
                 }
             }
             Err(_) => {
