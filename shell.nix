@@ -21,6 +21,8 @@ pkgs.mkShell {
       # for archiver to read git commit during build
       pkgs.git
 
+      pkgs.zstd
+
       # libbpf CO-RE pkgs
       #
       # use the unwrapped clang:
