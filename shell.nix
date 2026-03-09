@@ -18,6 +18,9 @@ pkgs.mkShell {
 
       pkgs.bpftools
 
+      # for archiver to read git commit during build
+      pkgs.git
+
       # libbpf CO-RE pkgs
       #
       # use the unwrapped clang:
