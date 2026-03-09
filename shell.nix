@@ -22,6 +22,7 @@ pkgs.mkShell {
       pkgs.git
 
       pkgs.zstd
+      pkgs.openssl
 
       # libbpf CO-RE pkgs
       #
