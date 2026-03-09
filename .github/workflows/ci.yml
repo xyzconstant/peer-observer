@@ -21,7 +21,7 @@ jobs:
     - uses: actions/checkout@v6
     - uses: ./.github/actions/setup-nix-action
     - name: Build
-      run: nix-shell --pure --command "cargo build --all-features"
+      run: nix-shell --pure --command "cargo build -vv --all-features"
 
   nix-test:
     runs-on: ubuntu-latest
