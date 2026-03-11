@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+package ipc_extractor;
+
+message ipc {
+  oneof ipc_event {
+    uint32 current_height = 1;
+  }
+}
