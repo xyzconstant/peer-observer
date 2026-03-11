@@ -60,6 +60,10 @@ pub struct Args {
     #[arg(long)]
     pub rpc: bool,
 
+    /// If passed, show IPC events
+    #[arg(long)]
+    pub ipc: bool,
+
     /// If passed, show p2p-extractor events
     #[arg(long)]
     pub p2p_extractor: bool,
@@ -77,6 +81,7 @@ impl Args {
             || self.mempool
             || self.validation
             || self.rpc
+            || self.ipc
             || self.p2p_extractor
             || self.log_extractor)
     }
@@ -91,6 +96,7 @@ impl Args {
         mempool: bool,
         validation: bool,
         rpc: bool,
+        ipc: bool,
         p2p_extractor: bool,
         log_extractor: bool,
     ) -> Self {
@@ -103,6 +109,7 @@ impl Args {
             mempool,
             validation,
             rpc,
+            ipc,
             p2p_extractor,
             log_extractor,
         }
@@ -120,6 +127,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         log::info!("logging mempool events:       {}", args.mempool);
         log::info!("logging validation events:    {}", args.validation);
         log::info!("logging rpc events:           {}", args.rpc);
+        log::info!("logging ipc events:           {}", args.ipc);
         log::info!("logging p2p_extractor events: {}", args.p2p_extractor);
         log::info!("logging log_extractor events: {}", args.log_extractor);
     }
@@ -194,6 +202,11 @@ fn log_event(event: Event, args: Args) {
         PeerObserverEvent::RpcExtractor(r) => {
             if log_all || args.rpc {
                 log::info!("rpc: {}", r.rpc_event.unwrap());
+            }
+        }
+        PeerObserverEvent::IpcExtractor(i) => {
+            if log_all || args.ipc {
+                log::info!("ipc: {}", i.ipc_event.unwrap());
             }
         }
         PeerObserverEvent::P2pExtractor(p) => {
