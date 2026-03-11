@@ -81,6 +81,8 @@ Options:
           If passed, show validation events
       --rpc
           If passed, show RPC events
+      --ipc
+          If passed, show IPC events
       --p2p-extractor
           If passed, show p2p-extractor events
       --log-extractor
