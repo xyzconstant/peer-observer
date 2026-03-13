@@ -9,8 +9,8 @@ use std::time::SystemTimeError;
 pub enum IpcCallKind {
     InitConstruct,
     ThreadMapMakeThread,
-    InitMakeChain,
-    ChainGetHeight,
+    InitMakeMining,
+    MiningGetTip,
 }
 
 impl fmt::Display for IpcCallKind {
@@ -18,8 +18,8 @@ impl fmt::Display for IpcCallKind {
         match self {
             IpcCallKind::InitConstruct => write!(f, "init.construct"),
             IpcCallKind::ThreadMapMakeThread => write!(f, "thread_map.make_thread"),
-            IpcCallKind::InitMakeChain => write!(f, "init.make_chain"),
-            IpcCallKind::ChainGetHeight => write!(f, "chain.get_height"),
+            IpcCallKind::InitMakeMining => write!(f, "init.make_mining"),
+            IpcCallKind::MiningGetTip => write!(f, "mining.get_tip"),
         }
     }
 }
