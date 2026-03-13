@@ -476,7 +476,7 @@ async fn test_integration_logger_ipc_mining_get_tip() {
             Event::new(PeerObserverEvent::IpcExtractor(ipc_extractor::Ipc {
                 ipc_event: Some(ipc_extractor::ipc::IpcEvent::BlockTip(BlockTip {
                     height: 111,
-                    hash: (&[0xff; 32]).to_vec(),
+                    hash: ([0xff; 32]).to_vec(),
                 })),
             }))
             .unwrap(),

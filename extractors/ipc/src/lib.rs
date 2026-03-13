@@ -137,7 +137,7 @@ async fn init_ipc_session(ipc_socket_path: &str) -> Result<IpcSession, RuntimeEr
 
     let mut rpc_system = RpcSystem::new(network, None);
     let init: init::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
-    let rpc_task = shared::tokio::task::spawn_local(async move { rpc_system.await });
+    let rpc_task = shared::tokio::task::spawn_local(rpc_system);
 
     let response = init
         .construct_request()
