@@ -24,6 +24,8 @@ selected P2P measurements as events into a NATS pub-sub queue.
 
 The `log-extractor` publishes them parsed `debug.log` log messages as events to NATS.
 
+And finally an experimental `ipc-extractor` which periodically fetch data from a `bitcoin-node` binary through a UNIX socket created with the `-ipcbind` option. Publishes to NATS as IPC events.
+
 The tools are written in Rust (or any other language that supports NATS 
 and protobuf). They subscribe to the NATS server. For example, the `logger` tool 
 simply prints out all messages that it receives, the `metrics` tool produces prometheus 
@@ -75,7 +77,7 @@ NATS server. Each extractor connects to a different interface:
 | rpc           | periodically fetches RPC for events   | [extractors/rpc/](extractors/rpc)   |
 | p2p           |Bitcoin P2P events from an inbound node| [extractors/p2p/](extractors/p2p)   |
 | log           | parses the debug.log of a node        | [extractors/log/](extractors/log)   |
-| ipc           | (WIP)                                 | [extractors/ipc/](extractors/ipc)    |
+| ipc           | Fetch data over via IPC socket (experimental) | [extractors/ipc/](extractors/ipc)    |
 
 ## Tools
 
