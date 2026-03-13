@@ -2,13 +2,11 @@ capnp::generated_code!(pub mod proxy_capnp, "capnp/mp/proxy_capnp.rs");
 capnp::generated_code!(pub mod common_capnp, "capnp/common_capnp.rs");
 capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
 capnp::generated_code!(pub mod echo_capnp, "capnp/echo_capnp.rs");
-capnp::generated_code!(pub mod handler_capnp, "capnp/handler_capnp.rs");
-capnp::generated_code!(pub mod chain_capnp, "capnp/chain_capnp.rs");
 capnp::generated_code!(pub mod init_capnp, "capnp/init_capnp.rs");
 
 use crate::init_capnp::init;
+use crate::mining_capnp::mining;
 use crate::proxy_capnp::thread;
-use crate::chain_capnp::chain;
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
 use shared::clap::{self, Parser};
 use shared::futures::AsyncReadExt;
@@ -68,7 +66,7 @@ impl Args {
 }
 
 struct IpcSession {
-    chain: chain::Client,
+    mining: mining::Client,
     thread: thread::Client,
     rpc_task: shared::tokio::task::JoinHandle<Result<(), capnp::Error>>,
 }
@@ -165,30 +163,30 @@ async fn init_ipc_session(ipc_socket_path: &str) -> Result<IpcSession, RuntimeEr
         .get_result()
         .map_err(|e| RuntimeError::ipc_call(IpcCallKind::ThreadMapMakeThread, e))?;
 
-    let mut make_chain_request = init.make_chain_request();
+    let mut make_mining_request = init.make_mining_request();
     {
-        let mut context = make_chain_request
+        let mut context = make_mining_request
             .get()
             .get_context()
-            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeChain, e))?;
+            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeMining, e))?;
         context.set_thread(thread.clone());
         context.set_callback_thread(thread.clone());
     }
-    let response = make_chain_request
+    let response = make_mining_request
         .send()
         .promise
         .await
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeChain, e))?;
-    let chain = response
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeMining, e))?;
+    let mining = response
         .get()
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeChain, e))?
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeMining, e))?
         .get_result()
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeChain, e))?;
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::InitMakeMining, e))?;
 
     Ok(IpcSession {
         rpc_task,
         thread,
-        chain,
+        mining,
     })
 }
 
@@ -196,24 +194,26 @@ async fn get_height(
     ipc_client: &IpcSession,
     nats_client: &async_nats::Client,
 ) -> Result<(), RuntimeError> {
-    let mut get_height_request = ipc_client.chain.get_height_request();
+    let mut get_tip_request = ipc_client.mining.get_tip_request();
     {
-        let mut context = get_height_request
+        let mut context = get_tip_request
             .get()
             .get_context()
-            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::ChainGetHeight, e))?;
+            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?;
         context.set_thread(ipc_client.thread.clone());
         context.set_callback_thread(ipc_client.thread.clone());
     }
 
-    let current_height = get_height_request
+    let current_height = get_tip_request
         .send()
         .promise
         .await
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::ChainGetHeight, e))?
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
         .get()
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::ChainGetHeight, e))?
-        .get_result();
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
+        .get_result()
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
+        .get_height();
 
     let proto = Event::new(PeerObserverEvent::IpcExtractor(ipc_extractor::Ipc {
         ipc_event: Some(ipc_extractor::ipc::IpcEvent::CurrentHeight(current_height)),
