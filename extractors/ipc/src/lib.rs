@@ -14,7 +14,7 @@ use shared::nats_subjects::Subject;
 use shared::nats_util::{self, NatsArgs};
 use shared::prost::Message;
 use shared::protobuf::event::{Event, event::PeerObserverEvent};
-use shared::protobuf::ipc_extractor;
+use shared::protobuf::ipc_extractor::{self, BlockTip};
 use shared::tokio::net::UnixStream;
 use shared::tokio::sync::watch;
 use shared::tokio::time::{self, Duration};
@@ -204,19 +204,34 @@ async fn get_height(
         context.set_callback_thread(ipc_client.thread.clone());
     }
 
-    let current_height = get_tip_request
+    let get_tip_response = get_tip_request
         .send()
         .promise
         .await
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
-        .get()
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
-        .get_result()
-        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
-        .get_height();
+        .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?;
+
+    let height: i32;
+    let mut hash: Vec<u8>;
+    {
+        let tip = get_tip_response
+            .get()
+            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
+            .get_result()
+            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?;
+
+        height = tip.get_height();
+        hash = tip
+            .get_hash()
+            .map_err(|e| RuntimeError::ipc_call(IpcCallKind::MiningGetTip, e))?
+            .to_vec();
+        hash.reverse();
+    }
 
     let proto = Event::new(PeerObserverEvent::IpcExtractor(ipc_extractor::Ipc {
-        ipc_event: Some(ipc_extractor::ipc::IpcEvent::CurrentHeight(current_height)),
+        ipc_event: Some(ipc_extractor::ipc::IpcEvent::BlockTip(BlockTip {
+            height,
+            hash,
+        })),
     }))?;
 
     nats_client
