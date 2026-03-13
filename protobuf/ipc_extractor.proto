@@ -4,6 +4,11 @@ package ipc_extractor;
 
 message ipc {
   oneof ipc_event {
-    int32 current_height = 1;
+    BlockTip block_tip = 1;
   }
+}
+
+message BlockTip {
+  required int32 height = 1;
+  required bytes hash   = 2;
 }
