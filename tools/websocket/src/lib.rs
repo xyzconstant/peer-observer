@@ -256,6 +256,7 @@ async fn broadcast_to_clients(event: &PeerObserverEvent, clients: &Clients) {
             PeerObserverEvent::RpcExtractor(_) => client.subscriptions.rpc,
             PeerObserverEvent::P2pExtractor(_) => client.subscriptions.p2p,
             PeerObserverEvent::LogExtractor(_) => client.subscriptions.log,
+            PeerObserverEvent::IpcExtractor(_) => todo!(),
         };
 
         if !is_subscribed {
