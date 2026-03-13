@@ -169,6 +169,7 @@ fn handle_event(
             PeerObserverEvent::LogExtractor(l) => {
                 handle_log_event(&l, metrics);
             }
+            PeerObserverEvent::IpcExtractor(_) => todo!(),
         }
     }
 
