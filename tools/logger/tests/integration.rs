@@ -18,6 +18,7 @@ use shared::{
             Ebpf,
         },
         event::{event::PeerObserverEvent, Event},
+        ipc_extractor::{self, BlockTip},
         log_extractor::{self, LogDebugCategory},
         p2p_extractor,
         rpc_extractor::{self, PeerInfo, PeerInfos},
@@ -77,6 +78,7 @@ fn make_test_args(
     rpc: bool,
     p2p_extractor: bool,
     log_extractor: bool,
+    ipc_extractor: bool,
 ) -> Args {
     Args::new(
         nats_util::NatsArgs {
@@ -94,6 +96,7 @@ fn make_test_args(
         rpc,
         p2p_extractor,
         log_extractor,
+        ipc_extractor,
     )
 }
 
@@ -125,6 +128,7 @@ async fn publish_and_check(events: &[Event], subject: Subject, expected: &str) {
     let logger_handle = tokio::spawn(async move {
         let args = make_test_args(
             nats_server.port,
+            true,
             true,
             true,
             true,
@@ -176,7 +180,7 @@ async fn test_integration_logger_fail_if_no_nats() {
     let logger_handle = tokio::spawn(async move {
         let args = make_test_args(
             65535, // There shouln't be a NATS server running on this port..
-            true, true, true, true, true, true, true, true,
+            true, true, true, true, true, true, true, true, true,
         );
         match logger::run(args, shutdown_rx.clone()).await {
             Ok(_) => panic!("We should fail when no NATS server is reachable."),
@@ -458,6 +462,28 @@ async fn test_integration_logger_rpc_peerinfo() {
         Subject::Rpc,
         r#"
         rpc: PeerInfos([PeerInfo(id=1), PeerInfo(id=2), PeerInfo(id=2)])
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logger_ipc_mining_get_tip() {
+    println!("test that IPC events are logged");
+
+    publish_and_check(
+        &[
+            Event::new(PeerObserverEvent::IpcExtractor(ipc_extractor::Ipc {
+                ipc_event: Some(ipc_extractor::ipc::IpcEvent::BlockTip(BlockTip {
+                    height: 111,
+                    hash: ([0xff; 32]).to_vec(),
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Ipc,
+        r#"
+        ipc: BlockTip(height=111, hash=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
         "#,
     )
     .await;
