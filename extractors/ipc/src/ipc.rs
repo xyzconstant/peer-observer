@@ -48,11 +48,8 @@ impl IpcClient {
         let thread = response.get()?.get_result()?;
 
         let mut req = init.make_mining_request();
-        {
-            let mut ctx = req.get().get_context()?;
-            ctx.set_thread(thread.clone());
-            ctx.set_callback_thread(thread.clone());
-        }
+        set_context(req.get().get_context()?, &thread);
+
         let response = req.send().promise.await?;
         let mining = response.get()?.get_result()?;
 
@@ -65,11 +62,7 @@ impl IpcClient {
 
     pub async fn get_tip(&self) -> Result<BlockTip, RuntimeError> {
         let mut req = self.mining.get_tip_request();
-        {
-            let mut ctx = req.get().get_context()?;
-            ctx.set_thread(self.thread.clone());
-            ctx.set_callback_thread(self.thread.clone());
-        }
+        set_context(req.get().get_context()?, &self.thread);
 
         let response = req.send().promise.await?;
         let tip = response.get()?.get_result()?;
@@ -80,4 +73,9 @@ impl IpcClient {
 
         Ok(BlockTip { height, hash })
     }
+}
+
+fn set_context(mut ctx: proxy_capnp::context::Builder<'_>, thread: &ThreadClient) {
+    ctx.set_thread(thread.clone());
+    ctx.set_callback_thread(thread.clone());
 }
