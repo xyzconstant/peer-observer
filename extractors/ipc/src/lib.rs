@@ -1,13 +1,21 @@
-use shared::clap::{self, Parser};
-use shared::nats_subjects::Subject;
-use shared::nats_util::{self, NatsArgs};
-use shared::prost::Message;
-use shared::protobuf::event::{Event, event::PeerObserverEvent};
-use shared::protobuf::ipc_extractor::{self};
-use shared::tokio::net::UnixStream;
-use shared::tokio::sync::watch;
-use shared::tokio::time::{self, Duration};
-use shared::{async_nats, log};
+use shared::{
+    async_nats,
+    clap::{self, Parser},
+    log,
+    nats_subjects::Subject,
+    nats_util::{self, NatsArgs},
+    prost::Message,
+    protobuf::{
+        event::{Event, event::PeerObserverEvent},
+        ipc_extractor,
+    },
+    tokio::{
+        self,
+        net::UnixStream,
+        sync::watch,
+        time::{self, Duration},
+    },
+};
 use std::io;
 
 mod error;
@@ -80,7 +88,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
                 ),
             )
         })?;
-    shared::log::info!("Connected to IPC socket path at {}", &args.ipc_socket_path);
+    log::info!("Connected to IPC socket path at {}", &args.ipc_socket_path);
 
     let ipc_session = IpcClient::init(stream).await?;
 
@@ -92,7 +100,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     );
 
     loop {
-        shared::tokio::select! {
+        tokio::select! {
             _ = interval.tick() => {
                 if let Err(e) = get_tip(&ipc_session, &nats_client).await {
                         log::error!("Could not fetch and publish 'getHeight': {}", e)

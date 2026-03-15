@@ -1,15 +1,14 @@
+use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
+use shared::{
+    futures::AsyncReadExt,
+    protobuf::ipc_extractor::BlockTip,
+    tokio::{self, net::UnixStream, task::JoinHandle},
+};
+
 use crate::error::{IpcCallKind, RuntimeError};
 use crate::init_capnp::init;
 use crate::mining_capnp::mining;
 use crate::proxy_capnp::thread;
-use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
-use shared::protobuf::ipc_extractor::BlockTip;
-use shared::{
-    futures::AsyncReadExt,
-    tokio::{net::UnixStream, task::JoinHandle},
-};
-
-impl mining::Client {}
 
 pub struct IpcClient {
     pub mining: mining::Client,
@@ -29,7 +28,7 @@ impl IpcClient {
 
         let mut rpc_system = RpcSystem::new(network, None);
         let init: init::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
-        let rpc_task = shared::tokio::task::spawn_local(rpc_system);
+        let rpc_task = tokio::task::spawn_local(rpc_system);
 
         let response = init
             .construct_request()

@@ -1,8 +1,9 @@
 use ipc_extractor::Args;
-use shared::log;
-use shared::tokio::task::LocalSet;
-use shared::tokio::{self, signal, sync::watch};
-use shared::{clap::Parser, simple_logger};
+use shared::{
+    clap::Parser,
+    log, simple_logger,
+    tokio::{self, signal, sync::watch, task::LocalSet},
+};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -12,9 +13,7 @@ async fn main() {
         eprintln!("ipc extractor error: {}", e);
     }
 
-    let local = LocalSet::new();
-
-    local
+    LocalSet::new()
         .run_until(async move {
             let (shutdown_tx, shutdown_rx) = watch::channel(false);
             let run_future = ipc_extractor::run(args, shutdown_rx);
