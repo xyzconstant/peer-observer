@@ -6,5 +6,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file("capnp/mining.capnp")
         .file("capnp/init.capnp")
         .run()?;
+
+    println!("cargo:rerun-if-changed=capnp/mp/proxy.capnp");
+    println!("cargo:rerun-if-changed=capnp/common.capnp");
+    println!("cargo:rerun-if-changed=capnp/echo.capnp");
+    println!("cargo:rerun-if-changed=capnp/mining.capnp");
+    println!("cargo:rerun-if-changed=capnp/init.capnp");
+
     Ok(())
 }
