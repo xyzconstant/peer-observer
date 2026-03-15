@@ -21,12 +21,6 @@ use std::io;
 mod error;
 use error::RuntimeError;
 
-// Generate capnp bindings before using `ipc` module
-capnp::generated_code!(pub mod proxy_capnp, "capnp/mp/proxy_capnp.rs");
-capnp::generated_code!(pub mod common_capnp, "capnp/common_capnp.rs");
-capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
-capnp::generated_code!(pub mod echo_capnp, "capnp/echo_capnp.rs");
-capnp::generated_code!(pub mod init_capnp, "capnp/init_capnp.rs");
 mod ipc;
 use ipc::IpcClient;
 

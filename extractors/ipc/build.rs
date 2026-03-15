@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file("capnp/echo.capnp")
         .file("capnp/mining.capnp")
         .file("capnp/init.capnp")
+        .default_parent_module(vec![String::from("ipc")])
         .run()?;
 
     println!("cargo:rerun-if-changed=capnp/mp/proxy.capnp");

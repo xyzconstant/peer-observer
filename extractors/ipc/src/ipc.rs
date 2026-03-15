@@ -1,3 +1,17 @@
+#[allow(dead_code)]
+mod generated {
+    capnp::generated_code!(pub mod proxy_capnp, "capnp/mp/proxy_capnp.rs");
+    capnp::generated_code!(pub mod common_capnp, "capnp/common_capnp.rs");
+    capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
+    capnp::generated_code!(pub mod echo_capnp, "capnp/echo_capnp.rs");
+    capnp::generated_code!(pub mod init_capnp, "capnp/init_capnp.rs");
+}
+use generated::*;
+
+use init_capnp::init::Client as InitClient;
+use mining_capnp::mining::Client as MiningClient;
+use proxy_capnp::thread::Client as ThreadClient;
+
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
 use shared::{
     futures::AsyncReadExt,
@@ -6,13 +20,10 @@ use shared::{
 };
 
 use crate::error::{IpcCallKind, RuntimeError};
-use crate::init_capnp::init;
-use crate::mining_capnp::mining;
-use crate::proxy_capnp::thread;
 
 pub struct IpcClient {
-    pub mining: mining::Client,
-    pub thread: thread::Client,
+    pub mining: MiningClient,
+    pub thread: ThreadClient,
     pub rpc_task: JoinHandle<Result<(), capnp::Error>>,
 }
 
@@ -27,7 +38,7 @@ impl IpcClient {
         ));
 
         let mut rpc_system = RpcSystem::new(network, None);
-        let init: init::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
+        let init: InitClient = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
         let rpc_task = tokio::task::spawn_local(rpc_system);
 
         let response = init
