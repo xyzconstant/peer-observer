@@ -12,8 +12,9 @@ use corepc_client::types::v30::{
 
 // Ideally, all type imports should use the generic mtype types.
 use corepc_node::mtype::{
-    GetBlockchainInfo, GetChainTxStats, GetMempoolInfo, GetNetworkInfo, GetNetworkInfoAddress,
-    GetNetworkInfoNetwork, GetOrphanTxsVerboseTwo, GetOrphanTxsVerboseTwoEntry,
+    EstimateSmartFee as RPCEstimateSmartFee, GetBlockchainInfo, GetChainTxStats, GetMempoolInfo,
+    GetNetworkInfo, GetNetworkInfoAddress, GetNetworkInfoNetwork, GetOrphanTxsVerboseTwo,
+    GetOrphanTxsVerboseTwoEntry,
 };
 
 use std::collections::BTreeMap;
@@ -68,6 +69,7 @@ impl fmt::Display for rpc::RpcEvent {
             rpc::RpcEvent::BlockchainInfo(info) => write!(f, "{}", info),
             rpc::RpcEvent::OrphanTxs(orphans) => write!(f, "{}", orphans),
             rpc::RpcEvent::Addrman(addrman) => write!(f, "{}", addrman),
+            rpc::RpcEvent::EstimateSmartFee(fee) => write!(f, "{}", fee),
         }
     }
 }
@@ -534,6 +536,49 @@ impl From<GetRawAddrMan> for Addrman {
         Addrman {
             new: table_to_addrman_buckets(&addrman.new),
             tried: table_to_addrman_buckets(&addrman.tried),
+        }
+    }
+}
+
+impl fmt::Display for EstimateSmartFee {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mode = FeeEstimateMode::try_from(self.mode)
+            .expect("Estimate mode must be a valid FeeEstimateMode enum variant");
+
+        let Some(fee_rate) = self.fee_rate else {
+            return write!(
+                f,
+                "EstimateSmartFee(estimation failed, blocks={}, mode={}, errors={:?})",
+                self.blocks, mode, self.errors
+            );
+        };
+
+        write!(
+            f,
+            "EstimateSmartFee(fee_rate={}sat/vB, blocks={}, mode={})",
+            fee_rate, self.blocks, mode,
+        )
+    }
+}
+
+impl fmt::Display for FeeEstimateMode {
+    fn fmt(&self, estimate: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(estimate, "{}", self.as_str_name())
+    }
+}
+
+impl EstimateSmartFee {
+    pub fn from_rpc(estimate: RPCEstimateSmartFee, target: u32, mode: FeeEstimateMode) -> Self {
+        let fee_rate_sat_per_vb = estimate
+            .fee_rate
+            .map(|fee_rate_btc_per_kvb| fee_rate_btc_per_kvb.to_sat_per_vb_f64());
+
+        EstimateSmartFee {
+            fee_rate: fee_rate_sat_per_vb,
+            blocks: estimate.blocks,
+            errors: estimate.errors.unwrap_or_default(),
+            requested_blocks: target,
+            mode: mode.into(),
         }
     }
 }
