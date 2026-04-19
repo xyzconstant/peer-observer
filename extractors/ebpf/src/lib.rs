@@ -337,6 +337,7 @@ fn try_get_running_process_pid(args: &Args) -> Result<i32, RuntimeError> {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn init_bpf_listener<'a, 'b>(
     args: &Args,
     pid: i32,
