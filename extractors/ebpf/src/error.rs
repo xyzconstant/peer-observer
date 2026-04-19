@@ -16,6 +16,7 @@ pub enum RuntimeError {
     SystemTime(SystemTimeError),
     SetLogger(SetLoggerError),
     NatsConnection(NatsError<ConnectErrorKind>),
+    NoPidFile((String, IoError)),
 }
 
 impl fmt::Display for RuntimeError {
@@ -33,6 +34,9 @@ impl fmt::Display for RuntimeError {
             RuntimeError::NatsConnection(e) => {
                 write!(f, "could not connect to NATS server {}", e)
             }
+            RuntimeError::NoPidFile((path, e)) => {
+                write!(f, "could not read pid file \"{}\": {}", path, e)
+            }
         }
     }
 }
@@ -48,6 +52,7 @@ impl error::Error for RuntimeError {
             RuntimeError::NatsConnection(ref e) => Some(e),
             RuntimeError::NoSuchBPFMap(_) => None,
             RuntimeError::NoSuchBPFProg(_) => None,
+            RuntimeError::NoPidFile((_, ref e)) => Some(e),
         }
     }
 }

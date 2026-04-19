@@ -264,7 +264,7 @@ fn bitcoind_pid(args: &Args) -> Result<i32, RuntimeError> {
         path
     );
 
-    let file = File::open(&path)?;
+    let file = File::open(&path).map_err(|e| RuntimeError::NoPidFile((path.clone(), e)))?;
     let mut reader = BufReader::new(file);
     let mut content = String::new();
     reader.read_to_string(&mut content)?;
