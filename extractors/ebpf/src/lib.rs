@@ -2,7 +2,7 @@
 
 use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
-use libbpf_rs::{Link, Map, MapCore, Object, ProgramMut, RingBufferBuilder, RingBuffer};
+use libbpf_rs::{Link, Map, MapCore, Object, ProgramMut, RingBuffer, RingBufferBuilder};
 use shared::clap::Parser;
 use shared::log::{self, error};
 use shared::nats_subjects::Subject;
@@ -301,7 +301,20 @@ fn try_get_running_process_pid(args: &Args) -> Result<i32, RuntimeError> {
     }
 }
 
-fn init_bpf_listener<'a, 'b>(args: &Args, pid: i32, nc: &'a async_nats::Client, obj_container: &'b mut MaybeUninit<libbpf_rs::OpenObject>) -> Result<(i32, tracing::TracingSkel<'b>, RingBuffer<'a>, Vec<Link>), RuntimeError> {
+fn init_bpf_listener<'a, 'b>(
+    args: &Args,
+    pid: i32,
+    nc: &'a async_nats::Client,
+    obj_container: &'b mut MaybeUninit<libbpf_rs::OpenObject>,
+) -> Result<
+    (
+        i32,
+        tracing::TracingSkel<'b>,
+        RingBuffer<'a>,
+        Vec<Link>,
+    ),
+    RuntimeError,
+> {
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(args.libbpf_debug);
     log::info!("Opening BPF skeleton with debug={}..", args.libbpf_debug);
@@ -426,7 +439,8 @@ pub async fn run(args: Args, shutdown_rx: watch::Receiver<bool>) -> Result<(), R
     let mut obj_container = MaybeUninit::uninit();
     // Keeping _loaded_obj and _links alive is important. Dropping them triggers deleletion from the
     // kernel space of the corresponding bpf maps.
-    let (_, mut _loaded_obj, ring_buffers, _links) = init_bpf_listener(&args, pid, &nc, &mut obj_container)?;
+    let (mut pid, mut _loaded_obj, mut ring_buffers, mut _links) =
+        init_bpf_listener(&args, pid, &nc, &mut obj_container)?;
 
     let mut last_event_timestamp = SystemTime::now();
     let mut has_warned_about_no_events = false;
@@ -467,6 +481,32 @@ pub async fn run(args: Args, shutdown_rx: watch::Receiver<bool>) -> Result<(), R
                 }
             }
         };
+
+        if pid == 0 || !process_exists(pid) {
+            if pid != 0 {
+                log::info!("The bitcoind process with pid {} exited", pid);
+                pid = 0;
+            }
+
+            match try_get_running_process_pid(&args) {
+                Ok(new_pid) => {
+                    // The order in which we drop matters. Doing it the other way can cause a
+                    // use-after-free in libbpf.
+                    drop(_links);
+                    drop(_loaded_obj);
+                    (pid, _loaded_obj, ring_buffers, _links) =
+                        init_bpf_listener(&args, new_pid, &nc, &mut obj_container).unwrap();
+                    last_event_timestamp = SystemTime::now();
+                    has_warned_about_no_events = false;
+                }
+                // Restarting the bitcoind process can take some time
+                Err(RuntimeError::NoProcessWithPid(_) | RuntimeError::NoPidFile(_)) => {}
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+
         let duration_since_last_event = SystemTime::now().duration_since(last_event_timestamp)?;
         if duration_since_last_event >= NO_EVENTS_ERROR_DURATION {
             log::error!(
