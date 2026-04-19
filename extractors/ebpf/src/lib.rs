@@ -22,6 +22,7 @@ use shared::{async_nats, clap, nats_util, tokio};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::mem::MaybeUninit;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -225,6 +226,40 @@ impl Args {
     }
 }
 
+struct LogDropCall<T: Sized> {
+    name: String,
+    inner: T,
+}
+
+impl<T> LogDropCall<T> {
+    fn new(name: &str, inner: T) -> Self {
+        Self {
+            name: name.to_string(),
+            inner,
+        }
+    }
+}
+
+impl<T> Deref for LogDropCall<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.inner
+    }
+}
+
+impl<T> DerefMut for LogDropCall<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+}
+
+impl<T> Drop for LogDropCall<T> {
+    fn drop(&mut self) {
+        log::info!("Dropped {}", self.name);
+    }
+}
+
 /// Queries procfs to see if the process with the given pid exists
 fn process_exists(pid: i32) -> bool {
     Path::new(&format!("/proc/{}/stat", pid)).exists()
@@ -310,9 +345,9 @@ fn init_bpf_listener<'a, 'b>(
 ) -> Result<
     (
         i32,
-        tracing::TracingSkel<'b>,
-        RingBuffer<'a>,
-        Vec<Link>,
+        LogDropCall<tracing::TracingSkel<'b>>,
+        LogDropCall<RingBuffer<'a>>,
+        LogDropCall<Vec<Link>>,
     ),
     RuntimeError,
 > {
@@ -421,7 +456,12 @@ fn init_bpf_listener<'a, 'b>(
         args.bitcoind_path
     );
 
-    Ok((pid, skel, ring_buffers, links))
+    Ok((
+        pid,
+        LogDropCall::new("loaded skel", skel),
+        LogDropCall::new("ring buffers", ring_buffers),
+        LogDropCall::new("links vector", links),
+    ))
 }
 
 pub async fn run(args: Args, shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
