@@ -214,6 +214,14 @@ impl Args {
             no_idle_exit: false,
         }
     }
+
+    fn no_tracepoints_enabled(&self) -> bool {
+        self.no_p2pmsg_tracepoints
+            && self.no_connection_tracepoints
+            && self.no_validation_tracepoints
+            && self.no_mempool_tracepoints
+            && !self.addrman_tracepoints
+    }
 }
 
 /// Find the BPF program with the given name
@@ -266,6 +274,11 @@ fn bitcoind_pid(args: &Args) -> Result<i32, RuntimeError> {
 }
 
 pub async fn run(args: Args, shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
+    if args.no_tracepoints_enabled() {
+        log::error!("No tracepoints enabled.");
+        return Ok(());
+    }
+
     let pid = bitcoind_pid(&args)?;
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
@@ -352,11 +365,6 @@ pub async fn run(args: Args, shutdown_rx: watch::Receiver<bool>) -> Result<(), R
         ringbuff_builder
             .add(&map_addrman_insert_new, |data| { handle_addrman_new(data, &nc) })?
             .add(&map_addrman_insert_tried, |data| { handle_addrman_tried(data, &nc) })?;
-    }
-
-    if active_tracepoints.is_empty() {
-        log::error!("No tracepoints enabled.");
-        return Ok(());
     }
 
     // attach tracepoints
