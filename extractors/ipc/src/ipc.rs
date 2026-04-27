@@ -2,8 +2,11 @@
 mod generated {
     capnp::generated_code!(pub mod proxy_capnp, "capnp/mp/proxy_capnp.rs");
     capnp::generated_code!(pub mod common_capnp, "capnp/common_capnp.rs");
-    capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
     capnp::generated_code!(pub mod echo_capnp, "capnp/echo_capnp.rs");
+    capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
+    capnp::generated_code!(pub mod handler_capnp, "capnp/handler_capnp.rs");
+    capnp::generated_code!(pub mod chain_capnp, "capnp/chain_capnp.rs");
+    capnp::generated_code!(pub mod rpc_capnp, "capnp/rpc_capnp.rs");
     capnp::generated_code!(pub mod init_capnp, "capnp/init_capnp.rs");
 }
 use generated::*;

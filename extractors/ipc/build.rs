@@ -4,6 +4,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file("capnp/common.capnp")
         .file("capnp/echo.capnp")
         .file("capnp/mining.capnp")
+        .file("capnp/handler.capnp")
+        .file("capnp/chain.capnp")
+        .file("capnp/rpc.capnp")
         .file("capnp/init.capnp")
         .default_parent_module(vec![String::from("ipc")])
         .run()?;
@@ -12,6 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=capnp/common.capnp");
     println!("cargo:rerun-if-changed=capnp/echo.capnp");
     println!("cargo:rerun-if-changed=capnp/mining.capnp");
+    println!("cargo:rerun-if-changed=capnp/handler.capnp");
+    println!("cargo:rerun-if-changed=capnp/chain.capnp");
+    println!("cargo:rerun-if-changed=capnp/rpc.capnp");
     println!("cargo:rerun-if-changed=capnp/init.capnp");
 
     Ok(())
