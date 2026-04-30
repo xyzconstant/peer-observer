@@ -163,7 +163,7 @@ async fn fetch_and_publish_tip(
     nats_client: &async_nats::Client,
     metrics: &Metrics,
 ) -> Result<(), RuntimeError> {
-    let tip = match measure_ipc_call("get_tip", metrics, ipc_client.get_tip()).await? {
+    let tip = match measure_ipc_call("get_tip", metrics, ipc_client.reader.get_tip()).await? {
         Some(t) => t,
         None => return Ok(()), // the node has no tip loaded yet, skip NATS publish
     };
