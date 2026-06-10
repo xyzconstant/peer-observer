@@ -5,6 +5,7 @@ package ipc_extractor;
 message ipc {
   oneof ipc_event {
     BlockTip block_tip = 1;
+    uint32 uptime = 2;
   }
 }
 

@@ -8,6 +8,7 @@ impl fmt::Display for ipc::IpcEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ipc::IpcEvent::BlockTip(tip) => write!(f, "{}", tip),
+            ipc::IpcEvent::Uptime(seconds) => write!(f, "Uptime({}s)", seconds),
         }
     }
 }

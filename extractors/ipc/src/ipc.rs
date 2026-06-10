@@ -3,6 +3,7 @@ mod generated {
     capnp::generated_code!(pub mod proxy_capnp, "capnp/mp/proxy_capnp.rs");
     capnp::generated_code!(pub mod common_capnp, "capnp/common_capnp.rs");
     capnp::generated_code!(pub mod mining_capnp, "capnp/mining_capnp.rs");
+    capnp::generated_code!(pub mod rpc_capnp, "capnp/rpc_capnp.rs");
     capnp::generated_code!(pub mod echo_capnp, "capnp/echo_capnp.rs");
     capnp::generated_code!(pub mod init_capnp, "capnp/init_capnp.rs");
 }
@@ -11,9 +12,11 @@ use generated::*;
 use init_capnp::init::Client as InitClient;
 use mining_capnp::mining::Client as MiningClient;
 use proxy_capnp::thread::Client as ThreadClient;
+use rpc_capnp::rpc::Client as RpcClient;
 
 use capnp_rpc::{Disconnector, RpcSystem, rpc_twoparty_capnp, twoparty};
 use shared::{
+    bitcoind::serde_json::{self, Value, json},
     futures::AsyncReadExt,
     protobuf::ipc_extractor::BlockTip,
     tokio::{self, net::UnixStream, task::JoinHandle},
@@ -24,6 +27,7 @@ use crate::error::RuntimeError;
 
 pub struct IpcClient {
     pub mining: MiningClient,
+    pub rpc: RpcClient,
     pub thread: ThreadClient,
     pub rpc_task: JoinHandle<Result<(), capnp::Error>>,
     pub disconnector: Disconnector<rpc_twoparty_capnp::Side>,
@@ -56,10 +60,17 @@ impl IpcClient {
         let response = req.send().promise.await?;
         let mining = response.get()?.get_result()?;
 
+        let mut req = init.make_rpc_request();
+        set_context(req.get().get_context()?, &thread);
+
+        let response = req.send().promise.await?;
+        let rpc = response.get()?.get_result()?;
+
         Ok(Self {
             rpc_task,
             thread,
             mining,
+            rpc,
             disconnector,
         })
     }
@@ -80,6 +91,33 @@ impl IpcClient {
         let hash = tip.get_hash()?.to_vec();
 
         Ok(Some(BlockTip { height, hash }))
+    }
+
+    pub async fn get_uptime(&self) -> Result<Option<u32>, RuntimeError> {
+        let mut req = self.rpc.execute_rpc_request();
+        set_context(req.get().get_context()?, &self.thread);
+
+        let j = json!({
+            "method": "getblockcount",
+            "params": [],
+            "id": "test",
+            "jsonrpc": "2.0"
+        });
+
+        req.get().set_request(j.to_string());
+
+        let response = req.send().promise.await?;
+
+        let result = response.get()?.get_result()?.to_string().unwrap();
+
+        let v: Value = serde_json::from_str(&result)
+            .map_err(|e| format!("failed to parse rpc response as JSON: {e}"))
+            .unwrap();
+
+        // the actual result is wrong, but we're just measuring execution time
+        let uptime = v["result"].as_u64().unwrap();
+
+        Ok(Some(uptime as u32))
     }
 }
 

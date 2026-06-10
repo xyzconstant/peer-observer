@@ -98,7 +98,7 @@ pub async fn run(
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                if let Err(e) = fetch_and_publish_tip(&ipc_session, &nats_client, &metrics).await {
+                if let Err(e) = fetch_and_publish_uptime(&ipc_session, &nats_client, &metrics).await {
                     log::error!("Could not fetch and publish 'BlockTip': {}", e);
                 }
             }
@@ -158,6 +158,7 @@ where
     res
 }
 
+#[warn(unused)]
 async fn fetch_and_publish_tip(
     ipc_client: &IpcClient,
     nats_client: &async_nats::Client,
@@ -178,6 +179,31 @@ async fn fetch_and_publish_tip(
             metrics
                 .nats_publish_errors
                 .with_label_values(&["get_tip"])
+                .inc();
+        })?;
+    Ok(())
+}
+
+async fn fetch_and_publish_uptime(
+    ipc_client: &IpcClient,
+    nats_client: &async_nats::Client,
+    metrics: &Metrics,
+) -> Result<(), RuntimeError> {
+    let tip = match measure_ipc_call("uptime", metrics, ipc_client.get_uptime()).await? {
+        Some(t) => t,
+        None => return Ok(()),
+    };
+
+    let proto = Event::new(PeerObserverEvent::IpcExtractor(ipc_extractor::Ipc {
+        ipc_event: Some(ipc_extractor::ipc::IpcEvent::Uptime(tip)),
+    }))?;
+    nats_client
+        .publish(Subject::Ipc.to_string(), proto.encode_to_vec().into())
+        .await
+        .inspect_err(|_| {
+            metrics
+                .nats_publish_errors
+                .with_label_values(&["uptime"])
                 .inc();
         })?;
     Ok(())
