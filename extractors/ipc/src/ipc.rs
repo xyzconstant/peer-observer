@@ -1,59 +1,96 @@
 use bitcoin_capnp_types::{
     capnp::Error as CapnpError,
     capnp_rpc::{Disconnector, RpcSystem, rpc_twoparty_capnp, twoparty},
-    init_capnp::init::Client as InitClient,
-    mining_capnp::mining::Client as MiningClient,
-    proxy_capnp::{self, thread::Client as ThreadClient},
+    init_capnp::init,
+    mining_capnp::mining,
+    proxy_capnp::{self, thread},
 };
 
 use shared::{
-    anyhow::Result,
+    anyhow::{Context, Result},
     futures::AsyncReadExt,
+    log,
     protobuf::ipc_extractor::BlockTip,
     tokio::{self, net::UnixStream, task::JoinHandle},
     tokio_util,
 };
 
+pub struct Connection {
+    rpc_task: JoinHandle<Result<(), CapnpError>>,
+    disconnector: Disconnector<rpc_twoparty_capnp::Side>,
+}
+
+impl Connection {
+    fn new(
+        rpc_task: JoinHandle<Result<(), CapnpError>>,
+        disconnector: Disconnector<rpc_twoparty_capnp::Side>,
+    ) -> Self {
+        Self {
+            rpc_task,
+            disconnector,
+        }
+    }
+
+    pub async fn closed(&mut self) -> Result<()> {
+        match (&mut self.rpc_task).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e).context("the IPC connection failed"),
+            Err(e) => Err(e).context("the IPC task panicked or was cancelled"),
+        }
+    }
+
+    pub async fn shutdown(&mut self) {
+        if let Err(e) = (&mut self.disconnector).await {
+            log::error!("could not run disconnector during shutdown: {}", e);
+        }
+        if !self.rpc_task.is_finished() {
+            let _ = (&mut self.rpc_task).await;
+        }
+    }
+}
+
+pub async fn connect_stream(stream: UnixStream) -> Result<(IpcClient, Connection)> {
+    let (reader, writer) = tokio_util::compat::TokioAsyncReadCompatExt::compat(stream).split();
+    let network = Box::new(twoparty::VatNetwork::new(
+        reader,
+        writer,
+        rpc_twoparty_capnp::Side::Client,
+        Default::default(),
+    ));
+
+    let mut rpc_system = RpcSystem::new(network, None);
+    let init_client: init::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
+    let disconnector = rpc_system.get_disconnector();
+    let rpc_task = tokio::task::spawn_local(rpc_system);
+
+    let conn = Connection::new(rpc_task, disconnector);
+    let ipc = IpcClient::new(init_client).await?;
+
+    Ok((ipc, conn))
+}
+
+/// Client for the interfaces a `bitcoin-node` connection exposes once. Methods are named
+/// `<interface>_<method>` after the Cap'n Proto method they call.
 pub struct IpcClient {
-    pub mining: MiningClient,
-    pub thread: ThreadClient,
-    pub rpc_task: JoinHandle<Result<(), CapnpError>>,
-    pub disconnector: Disconnector<rpc_twoparty_capnp::Side>,
+    thread: thread::Client,
+    mining: mining::Client,
 }
 
 impl IpcClient {
-    pub async fn init(stream: UnixStream) -> Result<Self> {
-        let (reader, writer) = tokio_util::compat::TokioAsyncReadCompatExt::compat(stream).split();
-        let network = Box::new(twoparty::VatNetwork::new(
-            reader,
-            writer,
-            rpc_twoparty_capnp::Side::Client,
-            Default::default(),
-        ));
-
-        let mut rpc_system = RpcSystem::new(network, None);
-        let init: InitClient = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
-        let disconnector = rpc_system.get_disconnector();
-        let rpc_task = tokio::task::spawn_local(rpc_system);
-
-        let response = init.construct_request().send().promise.await?;
+    async fn new(init_client: init::Client) -> Result<Self> {
+        let response = init_client.construct_request().send().promise.await?;
         let thread_map = response.get()?.get_thread_map()?;
 
         let response = thread_map.make_thread_request().send().promise.await?;
         let thread = response.get()?.get_result()?;
 
-        let mut req = init.make_mining_request();
+        let mut req = init_client.make_mining_request();
         set_context(req.get().get_context()?, &thread);
 
         let response = req.send().promise.await?;
         let mining = response.get()?.get_result()?;
 
-        Ok(Self {
-            rpc_task,
-            thread,
-            mining,
-            disconnector,
-        })
+        Ok(Self { thread, mining })
     }
 
     pub async fn mining_get_tip(&self) -> Result<Option<BlockTip>> {
@@ -75,7 +112,7 @@ impl IpcClient {
     }
 }
 
-fn set_context(mut ctx: proxy_capnp::context::Builder<'_>, thread: &ThreadClient) {
+fn set_context(mut ctx: proxy_capnp::context::Builder<'_>, thread: &thread::Client) {
     ctx.set_thread(thread.clone());
     ctx.set_callback_thread(thread.clone());
 }

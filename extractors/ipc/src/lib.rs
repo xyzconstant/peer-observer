@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 mod ipc;
 mod metrics;
 
-use ipc::IpcClient;
+use ipc::{IpcClient, connect_stream};
 use metrics::Metrics;
 
 /// The peer-observer ipc-extractor periodically queries data from the
@@ -75,7 +75,7 @@ pub async fn run(
         })?;
     log::info!("Connected to IPC socket at {}", args.ipc_socket_path);
 
-    let mut ipc_session = IpcClient::init(stream)
+    let (ipc_client, mut connection) = connect_stream(stream)
         .await
         .context("initializing the IPC session")?;
 
@@ -97,15 +97,14 @@ pub async fn run(
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                if let Err(e) = fetch_and_publish_tip(&ipc_session, &nats_client, &metrics).await {
+                if let Err(e) = fetch_and_publish_tip(&ipc_client, &nats_client, &metrics).await {
                     log::error!("Could not fetch and publish 'BlockTip': {:#}", e);
                 }
             }
-            res = &mut ipc_session.rpc_task => {
+            res = connection.closed() => {
                 match res {
-                    Ok(Ok(())) => log::warn!("Lost IPC connection to bitcoin-node."),
-                    Ok(Err(e)) => log::error!("Lost IPC connection to bitcoin-node: {e}"),
-                    Err(e) => log::error!("IPC task panicked or was cancelled: {e}"),
+                    Ok(()) => log::warn!("Lost IPC connection to bitcoin-node."),
+                    Err(e) => log::error!("Lost IPC connection to bitcoin-node: {e:#}"),
                 }
                 break;
             }
@@ -124,12 +123,7 @@ pub async fn run(
         }
     }
 
-    if let Err(e) = ipc_session.disconnector.await {
-        log::error!("could not run disconnector during shutdown: {}", e);
-    }
-    if !ipc_session.rpc_task.is_finished() {
-        let _ = ipc_session.rpc_task.await;
-    }
+    connection.shutdown().await;
     Ok(())
 }
 
