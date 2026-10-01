@@ -56,7 +56,7 @@ impl IpcClient {
         })
     }
 
-    pub async fn get_tip(&self) -> Result<Option<BlockTip>> {
+    pub async fn mining_get_tip(&self) -> Result<Option<BlockTip>> {
         let mut req = self.mining.get_tip_request();
         set_context(req.get().get_context()?, &self.thread);
 

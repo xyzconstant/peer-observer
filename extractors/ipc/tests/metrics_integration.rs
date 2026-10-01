@@ -96,11 +96,11 @@ async fn test_integration_metrics_ipc_fetch_duration() {
                 &metrics,
                 "ipcextractor_ipc_fetch_duration_seconds_count",
                 "ipc_method",
-                "get_tip",
+                "mining_get_tip",
             );
             assert!(
                 count >= 1,
-                "Should have recorded at least one get_tip call, got: {}",
+                "Should have recorded at least one mining_get_tip call, got: {}",
                 count
             );
 
