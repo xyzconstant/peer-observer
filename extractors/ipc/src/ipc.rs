@@ -3,7 +3,6 @@ use bitcoin_capnp_types::{
     capnp_rpc::{Disconnector, RpcSystem, rpc_twoparty_capnp, twoparty},
     init_capnp::init,
     mining_capnp::mining,
-    proxy_capnp::{self, thread},
 };
 
 use shared::{
@@ -72,30 +71,31 @@ pub async fn connect_stream(stream: UnixStream) -> Result<(IpcClient, Connection
 /// Client for the interfaces a `bitcoin-node` connection exposes once. Methods are named
 /// `<interface>_<method>` after the Cap'n Proto method they call.
 pub struct IpcClient {
-    thread: thread::Client,
     mining: mining::Client,
 }
 
 impl IpcClient {
     async fn new(init_client: init::Client) -> Result<Self> {
-        let response = init_client.construct_request().send().promise.await?;
-        let thread_map = response.get()?.get_thread_map()?;
+        let construct = init_client.construct_request().send();
+        let thread_map = construct.pipeline.get_thread_map();
 
-        let response = thread_map.make_thread_request().send().promise.await?;
-        let thread = response.get()?.get_result()?;
+        let mut req = thread_map.make_pool_request();
+        req.get().set_count(3); // create a pool of 3 threads on the server.
+        let make_pool = req.send();
 
-        let mut req = init_client.make_mining_request();
-        set_context(req.get().get_context()?, &thread);
+        let req = init_client.make_mining_request();
+        let make_mining = req.send();
+        let mining = make_mining.pipeline.get_result();
 
-        let response = req.send().promise.await?;
-        let mining = response.get()?.get_result()?;
+        construct.promise.await?;
+        make_pool.promise.await?;
+        make_mining.promise.await?;
 
-        Ok(Self { thread, mining })
+        Ok(Self { mining })
     }
 
     pub async fn mining_get_tip(&self) -> Result<Option<BlockTip>> {
-        let mut req = self.mining.get_tip_request();
-        set_context(req.get().get_context()?, &self.thread);
+        let req = self.mining.get_tip_request();
 
         let response = req.send().promise.await?;
 
@@ -110,9 +110,4 @@ impl IpcClient {
 
         Ok(Some(BlockTip { height, hash }))
     }
-}
-
-fn set_context(mut ctx: proxy_capnp::context::Builder<'_>, thread: &thread::Client) {
-    ctx.set_thread(thread.clone());
-    ctx.set_callback_thread(thread.clone());
 }
