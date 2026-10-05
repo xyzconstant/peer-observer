@@ -1,6 +1,8 @@
 use bitcoin_capnp_types::{
     capnp::Error as CapnpError,
-    capnp_rpc::{Disconnector, RpcSystem, rpc_twoparty_capnp, twoparty},
+    capnp_rpc::{self, Disconnector, RpcSystem, rpc_twoparty_capnp, twoparty},
+    chain_capnp::chain,
+    handler_capnp::handler,
     init_capnp::init,
     mining_capnp::mining,
 };
@@ -13,6 +15,8 @@ use shared::{
     tokio::{self, net::UnixStream, task::JoinHandle},
     tokio_util,
 };
+
+use crate::chain_notifications::{ChainNotificationsServer, NotificationHandler};
 
 pub struct Connection {
     rpc_task: JoinHandle<Result<(), CapnpError>>,
@@ -72,6 +76,8 @@ pub async fn connect_stream(stream: UnixStream) -> Result<(IpcClient, Connection
 /// `<interface>_<method>` after the Cap'n Proto method they call.
 pub struct IpcClient {
     mining: mining::Client,
+    chain: chain::Client,
+    notifications_handler: Option<handler::Client>,
 }
 
 impl IpcClient {
@@ -87,11 +93,34 @@ impl IpcClient {
         let make_mining = req.send();
         let mining = make_mining.pipeline.get_result();
 
+        let req = init_client.make_chain_request();
+        let make_chain = req.send();
+        let chain = make_chain.pipeline.get_result();
+
         construct.promise.await?;
         make_pool.promise.await?;
-        make_mining.promise.await?;
 
-        Ok(Self { mining })
+        // construct mining and chain.
+        make_mining.promise.await?;
+        make_chain.promise.await?;
+
+        Ok(Self {
+            mining,
+            chain,
+            notifications_handler: None, // set by `chain_handle_notifications`.
+        })
+    }
+
+    pub async fn chain_handle_notifications(&mut self, handler: NotificationHandler) -> Result<()> {
+        let mut req = self.chain.handle_notifications_request();
+        req.get()
+            .set_notifications(capnp_rpc::new_client(ChainNotificationsServer::new(
+                handler,
+            )));
+        let response = req.send().promise.await?;
+
+        self.notifications_handler = Some(response.get()?.get_result()?);
+        Ok(())
     }
 
     pub async fn mining_get_tip(&self) -> Result<Option<BlockTip>> {
@@ -109,5 +138,16 @@ impl IpcClient {
         let hash = tip.get_hash()?.to_vec();
 
         Ok(Some(BlockTip { height, hash }))
+    }
+
+    /// Destroys the notification handler on the node, then releases the remaining
+    /// capabilities. Must be called before the IPC connection is shut down.
+    pub async fn release(self) -> Result<()> {
+        // Destroying the handler unregisters the notification proxy from the node's
+        // validation signals and releases its reference to this server.
+        if let Some(handler) = self.notifications_handler {
+            handler.destroy_request().send().promise.await?;
+        }
+        Ok(())
     }
 }
